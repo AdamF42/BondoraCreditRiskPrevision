@@ -1,5 +1,7 @@
 import org.apache.spark.ml.Pipeline
-import org.apache.spark.ml.feature.StringIndexer
+import org.apache.spark.ml.classification.MultilayerPerceptronClassifier
+import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
+import org.apache.spark.ml.feature.{StringIndexer, VectorAssembler}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
 object BondoraCreditDefault {
@@ -15,6 +17,18 @@ object BondoraCreditDefault {
     "EmploymentStatus",
     "IncomeTotal",
     "Status")
+
+  val features2 = Seq("Age",
+    "NewCreditCustomerIndex",
+    "CountryIndex",
+    "AppliedAmount",
+    "Interest",
+    "LoanDuration",
+    "UseOfLoan",
+    "MaritalStatus",
+    "EmploymentStatus",
+    "IncomeTotal",
+    "label")
 
   def setupLogging(): Unit = {
     import org.apache.log4j.{Level, Logger}
@@ -35,7 +49,7 @@ object BondoraCreditDefault {
     val df = spark.read.format("csv")
       .option("header", value = true)
       .load("../LoanData.csv")
-
+    //$"Species".as("label")
     val endedLoans: Dataset[Row] = df.select(features.head, features.tail: _*)
       .where(df.col("ContractEndDate").isNotNull)
 
@@ -50,15 +64,50 @@ object BondoraCreditDefault {
       .withColumn("IncomeTotal", endedLoans.col("IncomeTotal").cast("double"))
 
     val indexers = dfChangeType.select("NewCreditCustomer", "Country", "Status").columns.map { colName =>
-      new StringIndexer().setInputCol(colName).setOutputCol(colName + "Index")
+      new StringIndexer().setInputCol(colName).setOutputCol(if (colName.equals("Status")) "label" else colName + "Index")
     }
 
-    val nomalized: DataFrame = new Pipeline()
+    val normalized: DataFrame = new Pipeline()
       .setStages(indexers)
       .fit(dfChangeType)
       .transform(dfChangeType)
+      .select(features2.head, features2.tail: _*)
 
-    nomalized.show()
+    // Split the data into train and test
+    val splits = normalized.randomSplit(Array(0.6, 0.4), seed = 1234L)
+    val train = splits(0)
+    val test = splits(1)
+
+    // specify layers for the neural network:
+    val layers = Array[Int](11, 4, 3)
+
+    //creating features column
+    val assembler = new VectorAssembler()
+      .setHandleInvalid("skip")
+      .setInputCols(Array(features2: _*))
+      .setOutputCol("features")
+
+    // create the trainer and set its parameters
+    val trainer = new MultilayerPerceptronClassifier()
+      .setLayers(layers)
+      .setBlockSize(128)
+      .setSeed(1234L)
+      .setFeaturesCol("features") // setting features column
+      .setMaxIter(10)
+
+    //creating pipeline
+    val pipeline = new Pipeline().setStages(Array(assembler, trainer))
+
+    // train the model
+    val model = pipeline.fit(train)
+
+    // compute accuracy on the test set
+    val result = model.transform(test)
+    val predictionAndLabels = result.select("prediction", "label")
+    val evaluator = new MulticlassClassificationEvaluator()
+      .setMetricName("accuracy")
+
+    println(s"Test set accuracy = ${evaluator.evaluate(predictionAndLabels)}")
 
   }
 
