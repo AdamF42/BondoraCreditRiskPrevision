@@ -1,4 +1,6 @@
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.ml.Pipeline
+import org.apache.spark.ml.feature.StringIndexer
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
 object BondoraCreditDefault {
 
@@ -34,8 +36,29 @@ object BondoraCreditDefault {
       .option("header", value = true)
       .load("../LoanData.csv")
 
-    val endedLoans = df.select(features.head,features.tail:_*)
+    val endedLoans: Dataset[Row] = df.select(features.head, features.tail: _*)
       .where(df.col("ContractEndDate").isNotNull)
+
+    val dfChangeType = endedLoans
+      .withColumn("Age", endedLoans.col("Age").cast("int"))
+      .withColumn("AppliedAmount", endedLoans.col("AppliedAmount").cast("double"))
+      .withColumn("Interest", endedLoans.col("Interest").cast("double"))
+      .withColumn("LoanDuration", endedLoans.col("LoanDuration").cast("int"))
+      .withColumn("UseOfLoan", endedLoans.col("UseOfLoan").cast("int"))
+      .withColumn("MaritalStatus", endedLoans.col("MaritalStatus").cast("int"))
+      .withColumn("EmploymentStatus", endedLoans.col("EmploymentStatus").cast("int"))
+      .withColumn("IncomeTotal", endedLoans.col("IncomeTotal").cast("double"))
+
+    val indexers = dfChangeType.select("NewCreditCustomer", "Country", "Status").columns.map { colName =>
+      new StringIndexer().setInputCol(colName).setOutputCol(colName + "Index")
+    }
+
+    val nomalized: DataFrame = new Pipeline()
+      .setStages(indexers)
+      .fit(dfChangeType)
+      .transform(dfChangeType)
+
+    nomalized.show()
 
   }
 
