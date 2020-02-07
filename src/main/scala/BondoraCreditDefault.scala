@@ -7,28 +7,13 @@ import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 object BondoraCreditDefault {
 
   val features = Seq("Age",
-    "NewCreditCustomer",
-    "Country",
     "AppliedAmount",
     "Interest",
     "LoanDuration",
     "UseOfLoan",
     "MaritalStatus",
     "EmploymentStatus",
-    "IncomeTotal",
-    "Status")
-
-  val features2 = Seq("Age",
-    "NewCreditCustomerIndex",
-    "CountryIndex",
-    "AppliedAmount",
-    "Interest",
-    "LoanDuration",
-    "UseOfLoan",
-    "MaritalStatus",
-    "EmploymentStatus",
-    "IncomeTotal",
-    "label")
+    "IncomeTotal")
 
   def setupLogging(): Unit = {
     import org.apache.log4j.{Level, Logger}
@@ -50,7 +35,7 @@ object BondoraCreditDefault {
       .option("header", value = true)
       .load("../LoanData.csv")
     //$"Species".as("label")
-    val endedLoans: Dataset[Row] = df.select(features.head, features.tail: _*)
+    val endedLoans: Dataset[Row] = df.select("Status", features:+"NewCreditCustomer":+"Country": _*)
       .where(df.col("ContractEndDate").isNotNull)
 
     val dfChangeType = endedLoans
@@ -71,7 +56,7 @@ object BondoraCreditDefault {
       .setStages(indexers)
       .fit(dfChangeType)
       .transform(dfChangeType)
-      .select(features2.head, features2.tail: _*)
+      .select("label", features:+"NewCreditCustomerIndex":+"CountryIndex": _*)
 
     // Split the data into train and test
     val splits = normalized.randomSplit(Array(0.6, 0.4), seed = 1234L)
@@ -79,21 +64,21 @@ object BondoraCreditDefault {
     val test = splits(1)
 
     // specify layers for the neural network:
-    val layers = Array[Int](11, 4, 3)
+    val layers = Array[Int](11, 6, 3)
 
     //creating features column
     val assembler = new VectorAssembler()
       .setHandleInvalid("skip")
-      .setInputCols(Array(features2: _*))
+      .setInputCols(Array(features :+ "label":+"NewCreditCustomerIndex":+"CountryIndex":_*))
       .setOutputCol("features")
 
     // create the trainer and set its parameters
     val trainer = new MultilayerPerceptronClassifier()
       .setLayers(layers)
-      .setBlockSize(128)
+      .setBlockSize(64)
       .setSeed(1234L)
       .setFeaturesCol("features") // setting features column
-      .setMaxIter(10)
+      .setMaxIter(10000)
 
     //creating pipeline
     val pipeline = new Pipeline().setStages(Array(assembler, trainer))
