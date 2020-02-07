@@ -34,8 +34,8 @@ object BondoraCreditDefault {
     val df = spark.read.format("csv")
       .option("header", value = true)
       .load("../LoanData.csv")
-    //$"Species".as("label")
-    val endedLoans: Dataset[Row] = df.select("Status", features:+"NewCreditCustomer":+"Country": _*)
+
+    val endedLoans: Dataset[Row] = df.select("Status", features :+ "NewCreditCustomer" :+ "Country": _*)
       .where(df.col("ContractEndDate").isNotNull)
 
     val dfChangeType = endedLoans
@@ -56,7 +56,7 @@ object BondoraCreditDefault {
       .setStages(indexers)
       .fit(dfChangeType)
       .transform(dfChangeType)
-      .select("label", features:+"NewCreditCustomerIndex":+"CountryIndex": _*)
+      .select("label", features :+ "NewCreditCustomerIndex" :+ "CountryIndex": _*)
 
     // Split the data into train and test
     val splits = normalized.randomSplit(Array(0.6, 0.4), seed = 1234L)
@@ -69,7 +69,7 @@ object BondoraCreditDefault {
     //creating features column
     val assembler = new VectorAssembler()
       .setHandleInvalid("skip")
-      .setInputCols(Array(features :+ "label":+"NewCreditCustomerIndex":+"CountryIndex":_*))
+      .setInputCols(Array(features :+ "label" :+ "NewCreditCustomerIndex" :+ "CountryIndex": _*))
       .setOutputCol("features")
 
     // create the trainer and set its parameters
@@ -78,7 +78,7 @@ object BondoraCreditDefault {
       .setBlockSize(64)
       .setSeed(1234L)
       .setFeaturesCol("features") // setting features column
-      .setMaxIter(10000)
+      .setMaxIter(380)
 
     //creating pipeline
     val pipeline = new Pipeline().setStages(Array(assembler, trainer))
