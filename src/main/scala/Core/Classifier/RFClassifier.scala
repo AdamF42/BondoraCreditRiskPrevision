@@ -1,30 +1,30 @@
 package Core.Classifier
 
 import Core.Assembler.BaseCustomAssembler
-import org.apache.spark.ml.classification.MultilayerPerceptronClassifier
+import org.apache.spark.ml.classification.RandomForestClassifier
 import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.sql.DataFrame
 
-private class MLPClassifier(assembler: BaseCustomAssembler) extends BaseClassifier {
+private class RFClassifier(assembler: BaseCustomAssembler) extends BaseClassifier {
 
   override def train(df: DataFrame, features: Seq[String]): PipelineModel = {
 
-    val trainer = createTrainer
-
     val vectorAssembler = assembler.createAssembler(features)
+
+    val trainer = createTrainer
 
     new Pipeline()
       .setStages(Array(vectorAssembler, trainer))
       .fit(df)
   }
 
-  private def createTrainer: MultilayerPerceptronClassifier =
-    new MultilayerPerceptronClassifier()
-      .setLayers(Array[Int](11, 6, 3))
-      .setBlockSize(64)
-      .setSeed(1234L)
+  private def createTrainer: RandomForestClassifier =
+    new RandomForestClassifier()
+      .setImpurity("gini")
+      .setMaxDepth(3)
+      .setNumTrees(10)
       .setFeaturesCol("features")
+      .setSeed(1234L)
       .setLabelCol("Status")
-      .setMaxIter(1)
 
 }
