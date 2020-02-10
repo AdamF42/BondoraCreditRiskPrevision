@@ -4,6 +4,6 @@ import org.apache.spark.ml.feature.VectorAssembler
 
 trait BaseCustomAssembler {
 
-  def createAssembler(features: Seq[String]):VectorAssembler
+  def getAssembler(features: Seq[String]): VectorAssembler
 
 }
