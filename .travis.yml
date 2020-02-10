@@ -4,9 +4,9 @@ jdk: openjdk8
 scala:
    - 2.12.10
 
-branches:
-  only:
-    - master 
+#branches:
+#  only:
+#    - master 
     
 notifications:
   email: false
