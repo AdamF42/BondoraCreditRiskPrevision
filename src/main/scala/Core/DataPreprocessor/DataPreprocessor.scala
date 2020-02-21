@@ -19,22 +19,27 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
 
     val dfEndedLoans = filterEndedLoans(df)
 
-    val colsDrop: Array[String] = getColumnsWithNullValues(dfEndedLoans)
-
-    val dfWithoutUselessCols = dfEndedLoans
-      .drop(colsDrop: _*)
-      .drop(Columns.getDate: _*)
-      .drop(Columns.getUseless: _*)
+    val dfWithoutUselessCols: DataFrame = removeUselessColumns(dfEndedLoans)
 
     val dfWithDoubleValues: DataFrame = transformValuesToDouble(dfWithoutUselessCols)
 
     val indexedDf: DataFrame = indexColumnsValues(dfWithDoubleValues)
 
-    val dfReduced: DataFrame = dropColumnsWithHighCorr(indexedDf, flag = true)
+    val dfReduced: DataFrame = dropColumnsWithHighCorr(indexedDf)
 
     val map: Map[String, Any] = getMapColumnsMean(dfReduced)
 
     dfReduced.na.fill(map)
+  }
+
+  private def removeUselessColumns(df: Dataset[Row]) = {
+    val colsDrop: Array[String] = getColumnsWithNullValues(df)
+
+    val dfWithoutUselessCols = df
+      .drop(colsDrop: _*)
+      .drop(Columns.getDate: _*)
+      .drop(Columns.getUseless: _*)
+    dfWithoutUselessCols
   }
 
   private def getMapColumnsMean(df: DataFrame) = {
@@ -104,41 +109,53 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
   }
 
   @scala.annotation.tailrec
-  private def dropColumnsWithHighCorr(df: DataFrame, flag: Boolean): DataFrame = {
+  private def dropColumnsWithHighCorr(df: DataFrame): DataFrame = {
 
-    if (!flag)
-      return df
+    val correlatedColumns: DataFrame = getCorrelatedColumns(df)
 
-    val result = new VectorAssembler()
+    val highCorrelatedColumns: DataFrame = correlatedColumns.filter(col("Correlation").between(0.7, 1))
+
+    if (highCorrelatedColumns.count > 0) {
+      val mostCorrelatedCol: String = highCorrelatedColumns
+        .orderBy(desc("Correlation"))
+        .select(col("item_from"))
+        .first.getString(0)
+      dropColumnsWithHighCorr(df.drop(mostCorrelatedCol))
+    }
+    else
+      df
+  }
+
+  private def getCorrelatedColumns(df: DataFrame) = {
+
+    val correlationMatrix: Matrix = getCorrelationMatrix(df)
+
+    val colNamePairs = df.columns.flatMap(c1 => df.columns.map(c2 => (c1, c2)))
+
+    val triplesList: List[(String, String, Double)] = colNamePairs.zip(correlationMatrix.toArray)
+      .filterNot(p => p._1._1 >= p._1._2)
+      .map(r => (r._1._1, r._1._2, r._2))
+      .toList
+
+    val corrValue: DataFrame = session.createDataFrame(triplesList)
+      .toDF("item_from", "item_to", "Correlation")
+      .withColumn("Correlation", expr("abs(Correlation)"))
+
+    corrValue
+  }
+
+  private def getCorrelationMatrix(df: DataFrame) = {
+    val dfAssembled: DataFrame = new VectorAssembler()
       .setHandleInvalid("skip")
       .setInputCols(df.columns)
       .setOutputCol("corr_columns")
       .transform(df)
       .select("corr_columns")
 
-    val corr: Row = Correlation.corr(result, "corr_columns").head // spearman
+    val corr: Row = Correlation.corr(dfAssembled, "corr_columns").head // spearman
 
     val matrixCorr: Matrix = corr.getAs(0)
-
-    val colNamePairs = df.columns.flatMap(c1 => df.columns.map(c2 => (c1, c2)))
-
-    val triplesList: List[(String, String, Double)] = colNamePairs.zip(matrixCorr.toArray)
-      .filterNot(p => p._1._1 >= p._1._2)
-      .map(r => (r._1._1, r._1._2, r._2)).toList
-
-    val corrValue: DataFrame = session.createDataFrame(triplesList)
-      .toDF("item_from", "item_to", "Correlation")
-      .withColumn("Correlation", expr("abs(Correlation)"))
-
-    val highCorr: DataFrame = corrValue.filter(col("Correlation").between(0.7, 1))
-
-    if (highCorr.count > 0) {
-      val dropCol = highCorr.orderBy(desc("Correlation")).select(col("item_from")).first.getString(0)
-      dropColumnsWithHighCorr(df.drop(dropCol), flag = true)
-    }
-    else
-      dropColumnsWithHighCorr(df, flag = false)
-
+    matrixCorr
   }
 
   private def filterEndedLoans(df: DataFrame): Dataset[Row] = {
@@ -151,7 +168,6 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
       .columns
       .map(x => (x, df.filter(df(x).isNull || df(x) === "" || df(x).isNaN).count))
   }
-
 
   private def castAllTypedColumnsTo(df: DataFrame, sourceType: DataType, targetType: DataType): DataFrame = {
     df.schema.filter(_.dataType == sourceType).foldLeft(df) {
