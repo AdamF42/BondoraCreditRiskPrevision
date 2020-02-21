@@ -7,7 +7,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object Main {
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
 
     val normalized: DataFrame = getDataFrame("../LoanData.csv")
 

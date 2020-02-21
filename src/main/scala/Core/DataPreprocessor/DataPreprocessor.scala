@@ -33,37 +33,36 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
   }
 
   private def removeUselessColumns(df: Dataset[Row]) = {
+
     val colsDrop: Array[String] = getColumnsWithNullValues(df)
 
-    val dfWithoutUselessCols = df
-      .drop(colsDrop: _*)
+    df.drop(colsDrop: _*)
       .drop(Columns.getDate: _*)
       .drop(Columns.getUseless: _*)
-    dfWithoutUselessCols
   }
 
   private def getMapColumnsMean(df: DataFrame) = {
+
     val nullValue = countNullValue(df)
-      .filter(y => y._2 > 0)
-      .map(z => z._1)
+      .filter { case (_, nullCount) => nullCount > 0 }
+      .map { case (columnName, _) => columnName }
 
     val media = df.select(nullValue.toSeq.map(mean): _*)
 
-    val mediaRenamed = media
-      .columns
+    val mediaRenamed = media.columns
       .foldLeft(media) { (dfTmp, colName) =>
         dfTmp.withColumnRenamed(colName, colName
           .replace("avg(", "")
           .replace(")", ""))
       }
 
-    val meanValues: Array[Map[String, Any]] = mediaRenamed.collect.map(r => Map(mediaRenamed.columns.zip(r.toSeq): _*))
-
-    val map = meanValues.head
-    map
+    mediaRenamed
+      .collect.map(r => Map(mediaRenamed.columns.zip(r.toSeq): _*))
+      .headOption.getOrElse(Map.empty[String,Any])
   }
 
-  private def indexColumnsValues(df:DataFrame) = {
+  private def indexColumnsValues(df: DataFrame) = {
+
     val indexers = createIndex(df)
 
     val dfIndexed: DataFrame = new Pipeline()
@@ -73,23 +72,19 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
       .drop(Columns.getStrings: _*)
       .cache()
 
-    val dfCorrectColumnsName = dfIndexed
-      .columns
+    dfIndexed.columns
       .foldLeft(dfIndexed) { (newdf, colname) =>
         newdf.withColumnRenamed(colname, colname
           .replace("Index", ""))
       }
-    dfCorrectColumnsName
-
   }
 
   private def transformValuesToDouble(df: DataFrame) = {
+
     val numericalCols: Seq[String] = df.columns.filter(c => !Columns.getStrings.contains(c))
     val dfNumerical: DataFrame = df.drop(Columns.getStrings: _*)
     val dfChangeNumType: DataFrame = castAllTypedColumnsTo(dfNumerical, StringType, DoubleType)
-        .withColumn("id", monotonically_increasing_id())
-
-    //val tmpdfNumerical = dfChangeNumType.withColumn("id", monotonically_increasing_id())
+      .withColumn("id", monotonically_increasing_id())
 
     val dfLexical: DataFrame = df.drop(numericalCols: _*)
     val tmpDFString = dfLexical.withColumn("id", monotonically_increasing_id())
@@ -102,28 +97,27 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
     val nullValuePerCol = countNullValue(dfEndedLoans)
     val nullThreshold = 20 * dfEndedLoans.count / 100
 
-    val columnsToDrop = nullValuePerCol.filter(x => x._2 >= nullThreshold)
+    val columnsToDrop = nullValuePerCol.filter { case (_,numOfNull) => numOfNull >= nullThreshold}
 
-    columnsToDrop.map(x => x._1)
-
+    columnsToDrop.map{ case (colName,_) => colName}
   }
 
   @scala.annotation.tailrec
   private def dropColumnsWithHighCorr(df: DataFrame): DataFrame = {
 
-    val correlatedColumns: DataFrame = getCorrelatedColumns(df)
+    val highCorrelatedColumns: DataFrame = getCorrelatedColumns(df)
+      .filter(col("Correlation")
+      .between(0.7, 1))
 
-    val highCorrelatedColumns: DataFrame = correlatedColumns.filter(col("Correlation").between(0.7, 1))
+    if (highCorrelatedColumns.count == 0)
+      return df
 
-    if (highCorrelatedColumns.count > 0) {
-      val mostCorrelatedCol: String = highCorrelatedColumns
-        .orderBy(desc("Correlation"))
-        .select(col("item_from"))
-        .first.getString(0)
-      dropColumnsWithHighCorr(df.drop(mostCorrelatedCol))
-    }
-    else
-      df
+    val mostCorrelatedCol: String = highCorrelatedColumns
+      .orderBy(desc("Correlation"))
+      .select(col("item_from"))
+      .first.getString(0)
+
+    dropColumnsWithHighCorr(df.drop(mostCorrelatedCol))
   }
 
   private def getCorrelatedColumns(df: DataFrame) = {
@@ -133,8 +127,8 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
     val colNamePairs = df.columns.flatMap(c1 => df.columns.map(c2 => (c1, c2)))
 
     val triplesList: List[(String, String, Double)] = colNamePairs.zip(correlationMatrix.toArray)
-      .filterNot(p => p._1._1 >= p._1._2)
-      .map(r => (r._1._1, r._1._2, r._2))
+      .filterNot{ case ((itemFrom,itemTo),_) => itemFrom >= itemTo}
+      .map{case ((itemFrom,itemTo),corrValue) => (itemFrom, itemTo, corrValue)}
       .toList
 
     val corrValue: DataFrame = session.createDataFrame(triplesList)
@@ -144,7 +138,8 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
     corrValue
   }
 
-  private def getCorrelationMatrix(df: DataFrame) = {
+  private def getCorrelationMatrix(df: DataFrame): Matrix = {
+
     val dfAssembled: DataFrame = new VectorAssembler()
       .setHandleInvalid("skip")
       .setInputCols(df.columns)
@@ -152,10 +147,9 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
       .transform(df)
       .select("corr_columns")
 
-    val corr: Row = Correlation.corr(dfAssembled, "corr_columns").head // spearman
+    val correlationMatrix: Row = Correlation.corr(dfAssembled, "corr_columns").first // spearman
 
-    val matrixCorr: Matrix = corr.getAs(0)
-    matrixCorr
+    correlationMatrix.getAs(0)
   }
 
   private def filterEndedLoans(df: DataFrame): Dataset[Row] = {
@@ -164,8 +158,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
   }
 
   private def countNullValue(df: DataFrame): Array[(String, Long)] = {
-    df
-      .columns
+    df.columns
       .map(x => (x, df.filter(df(x).isNull || df(x) === "" || df(x).isNaN).count))
   }
 
