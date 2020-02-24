@@ -6,8 +6,6 @@ version := "0.1"
 
 scalaVersion := "2.12.10"
 
-lazy val akkaVersion = "2.6.3"
-lazy val akkaHttpVersion = "10.1.11"
 lazy val circeVersion = "0.11.1"
 lazy val sparkVersion = "2.4.4"
 lazy val sttpVersion = "2.0.0-RC13"
@@ -20,13 +18,11 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.client" %% "core" % sttpVersion,
   "com.softwaremill.sttp.client" %% "json4s" % sttpVersion,
   "org.json4s" %% "json4s-native" % "3.6.7",
-  "io.circe" %% "circe-core" % circeVersion,
-  "io.circe" %% "circe-generic" % circeVersion,
-  "io.circe" %% "circe-parser" % circeVersion
+
 
 )
 
-/*scalacOptions ++= Seq(
+scalacOptions ++= Seq(
   "-deprecation",
   "-encoding",
   "utf-8",
@@ -40,6 +36,6 @@ libraryDependencies ++= Seq(
   "-Xfatal-warnings",
   "-Xfuture",
   "-Xlint"
-)*/
+)
 
 licenses := Seq("The Apache Software License, Version 2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))
