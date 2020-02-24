@@ -6,20 +6,20 @@ version := "0.1"
 
 scalaVersion := "2.12.10"
 
-lazy val akkaVersion = "2.6.3"
-lazy val akkaHttpVersion = "10.1.11"
-lazy val circeVersion    = "0.11.1"
+lazy val circeVersion = "0.11.1"
+lazy val sparkVersion = "2.4.4"
+lazy val sttpVersion = "2.0.0-RC13"
 
 libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-streaming" % "2.4.4",
-  "org.apache.spark" %% "spark-core" % "2.4.4",
-  "org.apache.spark" %% "spark-sql" % "2.4.4" ,
-  "org.apache.spark" %% "spark-mllib" % "2.4.4",
-  "org.plotly-scala" %% "plotly-core" % "0.7.3",
-  "com.typesafe.akka" %% "akka-stream"                 % akkaVersion,
-  "com.typesafe.akka" %% "akka-http"                   % akkaHttpVersion,
-  "io.circe"          %% "circe-generic"               % circeVersion,
-  "io.circe"          %% "circe-parser"                % circeVersion,
+  "org.apache.spark" %% "spark-streaming" % sparkVersion,
+  "org.apache.spark" %% "spark-core" % sparkVersion,
+  "org.apache.spark" %% "spark-sql" % sparkVersion,
+  "org.apache.spark" %% "spark-mllib" % sparkVersion,
+  "com.softwaremill.sttp.client" %% "core" % sttpVersion,
+  "com.softwaremill.sttp.client" %% "json4s" % sttpVersion,
+  "org.json4s" %% "json4s-native" % "3.6.7",
+
+
 )
 
 scalacOptions ++= Seq(
