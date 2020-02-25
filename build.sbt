@@ -6,9 +6,11 @@ version := "0.1"
 
 scalaVersion := "2.12.10"
 
-lazy val circeVersion = "0.11.1"
+lazy val circeVersion = "0.13.0"
 lazy val sparkVersion = "2.4.4"
-lazy val sttpVersion = "2.0.0-RC13"
+lazy val sttpVersion = "2.0.0-M1"
+lazy val mleapVersion = "0.15.0"
+lazy val scalacticVersion = "3.1.0"
 
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-streaming" % sparkVersion,
@@ -16,8 +18,20 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % sparkVersion,
   "org.apache.spark" %% "spark-mllib" % sparkVersion,
   "com.softwaremill.sttp.client" %% "core" % sttpVersion,
-  "com.softwaremill.sttp.client" %% "json4s" % sttpVersion,
-  "org.json4s" %% "json4s-native" % "3.6.7"
+  "ml.combust.mleap" %% "mleap-spark" % mleapVersion,
+  "ml.combust.mleap" %% "mleap-runtime" % mleapVersion,
+  "org.scala-lang.modules" %% "scala-xml" % "2.0.0-M1",
+  "com.softwaremill.sttp.client" %% "circe" % sttpVersion,
+  "io.circe" %% "circe-generic" % "0.13.0",
+  "org.scalactic" %% "scalactic" % scalacticVersion,
+  "org.scalatest" %% "scalatest" % scalacticVersion % Test,
+)
+
+
+dependencyOverrides ++= Seq(
+  "com.fasterxml.jackson.core" % "jackson-core" % "2.9.8",
+  "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.8",
+  "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % "2.9.8"
 )
 
 scalacOptions ++= Seq(
@@ -35,5 +49,6 @@ scalacOptions ++= Seq(
   "-Xfuture",
   "-Xlint"
 )
+
 
 licenses := Seq("The Apache Software License, Version 2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))
