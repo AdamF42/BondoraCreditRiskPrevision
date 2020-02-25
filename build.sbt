@@ -18,21 +18,15 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % sparkVersion,
   "org.apache.spark" %% "spark-mllib" % sparkVersion,
   "com.softwaremill.sttp.client" %% "core" % sttpVersion,
+  "com.softwaremill.sttp.client" %% "circe" % sttpVersion,
   "ml.combust.mleap" %% "mleap-spark" % mleapVersion,
   "ml.combust.mleap" %% "mleap-runtime" % mleapVersion,
   "org.scala-lang.modules" %% "scala-xml" % "2.0.0-M1",
-  "com.softwaremill.sttp.client" %% "circe" % sttpVersion,
-  "io.circe" %% "circe-generic" % "0.13.0",
+  "io.circe" %% "circe-generic" % circeVersion,
   "org.scalactic" %% "scalactic" % scalacticVersion,
   "org.scalatest" %% "scalatest" % scalacticVersion % Test,
 )
 
-
-dependencyOverrides ++= Seq(
-  "com.fasterxml.jackson.core" % "jackson-core" % "2.9.8",
-  "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.8",
-  "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % "2.9.8"
-)
 
 scalacOptions ++= Seq(
   "-deprecation",
@@ -48,6 +42,11 @@ scalacOptions ++= Seq(
   "-Xfatal-warnings",
   "-Xfuture",
   "-Xlint"
+
+dependencyOverrides ++= Seq(
+  "com.fasterxml.jackson.core" % "jackson-core" % "2.9.8",
+  "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.8",
+  "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % "2.9.8"
 )
 
 

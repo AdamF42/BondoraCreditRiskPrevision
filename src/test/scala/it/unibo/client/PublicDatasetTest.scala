@@ -1,8 +1,8 @@
 package it.unibo.client
 
-import it.unibo.client.model.{PublicDataset, PublicDatasetEmpty, PublicDatasetPayload}
 import io.circe.Json
 import io.circe.parser._
+import it.unibo.client.model.{PublicDataset, PublicDatasetEmpty, PublicDatasetPayload}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 

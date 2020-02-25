@@ -58,7 +58,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
 
     mediaRenamed
       .collect.map(r => Map(mediaRenamed.columns.zip(r.toSeq): _*))
-      .headOption.getOrElse(Map.empty[String,Any])
+      .headOption.getOrElse(Map.empty[String, Any])
   }
 
   private def indexColumnsValues(df: DataFrame) = {
@@ -97,9 +97,9 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
     val nullValuePerCol = countNullValue(dfEndedLoans)
     val nullThreshold = 20 * dfEndedLoans.count / 100
 
-    val columnsToDrop = nullValuePerCol.filter { case (_,numOfNull) => numOfNull >= nullThreshold}
+    val columnsToDrop = nullValuePerCol.filter { case (_, numOfNull) => numOfNull >= nullThreshold }
 
-    columnsToDrop.map{ case (colName,_) => colName}
+    columnsToDrop.map { case (colName, _) => colName }
   }
 
   @scala.annotation.tailrec
@@ -107,7 +107,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
 
     val highCorrelatedColumns: DataFrame = getCorrelatedColumns(df)
       .filter(col("Correlation")
-      .between(0.7, 1))
+        .between(0.7, 1))
 
     if (highCorrelatedColumns.count == 0)
       return df
@@ -127,8 +127,8 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
     val colNamePairs = df.columns.flatMap(c1 => df.columns.map(c2 => (c1, c2)))
 
     val triplesList: List[(String, String, Double)] = colNamePairs.zip(correlationMatrix.toArray)
-      .filterNot{ case ((itemFrom,itemTo),_) => itemFrom >= itemTo}
-      .map{case ((itemFrom,itemTo),corrValue) => (itemFrom, itemTo, corrValue)}
+      .filterNot { case ((itemFrom, itemTo), _) => itemFrom >= itemTo }
+      .map { case ((itemFrom, itemTo), corrValue) => (itemFrom, itemTo, corrValue) }
       .toList
 
     val corrValue: DataFrame = session.createDataFrame(triplesList)

@@ -4,8 +4,10 @@ import org.apache.spark.ml.classification.MultilayerPerceptronClassifier
 
 private class MLPClassifier() extends BaseClassifier {
 
+  private val mlpClassifier = new MultilayerPerceptronClassifier()
+
   override def createTrainer(): MultilayerPerceptronClassifier =
-    new MultilayerPerceptronClassifier()
+    mlpClassifier
       .setLayers(Array[Int](43, 20, 10, 3))
       .setBlockSize(64)
       .setSeed(1234L)
@@ -13,4 +15,5 @@ private class MLPClassifier() extends BaseClassifier {
       .setLabelCol("Status")
       .setMaxIter(1)
 
+  override def getSavedModelName(): String = "mlp.zip"
 }
