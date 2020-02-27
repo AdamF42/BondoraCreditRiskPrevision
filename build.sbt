@@ -17,9 +17,7 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-mllib" % sparkVersion,
   "com.softwaremill.sttp.client" %% "core" % sttpVersion,
   "com.softwaremill.sttp.client" %% "json4s" % sttpVersion,
-  "org.json4s" %% "json4s-native" % "3.6.7",
-
-
+  "org.json4s" %% "json4s-native" % "3.6.7"
 )
 
 scalacOptions ++= Seq(
