@@ -1,5 +1,6 @@
-package Client
+package it.unibo.client
 
+import it.unibo.client.model.{PublicDataset, PublicDatasetEmpty, PublicDatasetPayload}
 import io.circe.Json
 import io.circe.parser._
 import org.scalatest.matchers.should.Matchers
@@ -165,7 +166,7 @@ class PublicDatasetTest extends AnyWordSpec with Matchers {
       val result = PublicDataset.decoder.decodeJson(incomingJson)
       val payload: Seq[PublicDatasetPayload] = result.getOrElse(PublicDatasetEmpty).Payload
 
-      result shouldBe Right(PublicDataset(
+      result shouldBe Right(model.PublicDataset(
         PageSize = 1000,
         PageNr = 100,
         TotalCount = 10,

@@ -1,4 +1,4 @@
-package Core.DataPreprocessor
+package it.unibo.core.datapreprocessor
 
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.feature.{StringIndexer, VectorAssembler}

@@ -1,4 +1,4 @@
-package Core.Normalizer
+package it.unibo.core.normalizer
 
 import org.apache.spark.ml.feature.Normalizer
 

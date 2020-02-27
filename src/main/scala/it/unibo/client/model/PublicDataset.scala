@@ -1,4 +1,4 @@
-package Client
+package it.unibo.client.model
 
 import io.circe.Decoder
 import io.circe.generic.semiauto.deriveDecoder

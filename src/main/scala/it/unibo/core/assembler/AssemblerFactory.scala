@@ -1,4 +1,4 @@
-package Core.Assembler
+package it.unibo.core.assembler
 
 object AssemblerFactory {
 

@@ -1,4 +1,4 @@
-package Core.Normalizer
+package it.unibo.core.normalizer
 
 object NormalizerFactory {
 

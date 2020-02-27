@@ -1,4 +1,4 @@
-package Core.DataPreprocessor
+package it.unibo.core.datapreprocessor
 
 import org.apache.spark.sql.DataFrame
 

@@ -1,4 +1,4 @@
-package Core.Classifier
+package it.unibo.core.classifier
 
 object ClassifierFactory {
 

@@ -1,8 +1,8 @@
-import Core.Assembler.AssemblerFactory
-import Core.Classifier.ClassifierFactory
-import Core.Classifier.ClassifierFactory.{MLP, RF}
-import Core.DataPreprocessor.DataPreprocessorFactory
-import Core.Normalizer.NormalizerFactory
+import it.unibo.core.assembler.AssemblerFactory
+import it.unibo.core.classifier.ClassifierFactory
+import it.unibo.core.classifier.ClassifierFactory.{MLP, RF}
+import it.unibo.core.datapreprocessor.DataPreprocessorFactory
+import it.unibo.core.normalizer.NormalizerFactory
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.ml.PipelineModel
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -10,7 +10,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object Main {
 
-  val NORMALIZED_DATAFRAME = "../normalized.csv"
+  val normalizedDataSetPath = "../normalized.csv"
 
   def main(args: Array[String]): Unit = {
 
@@ -44,7 +44,7 @@ object Main {
 
   private def getNormalizedDataFrame()(implicit spark: SparkSession): DataFrame = {
     val fs: FileSystem = getFileSystem
-    val fileExists = fs.exists(new Path(NORMALIZED_DATAFRAME))
+    val fileExists = fs.exists(new Path(normalizedDataSetPath))
     if (fileExists) retrieveNormalizedDataFrame()
     else getDataFrame
   }
@@ -53,7 +53,7 @@ object Main {
     spark.read.format("csv")
       .option("header", value = true)
       .option("inferSchema", "true")
-      .load(NORMALIZED_DATAFRAME)
+      .load(normalizedDataSetPath)
   }
 
   private def getDataFrame()(implicit spark: SparkSession): DataFrame = {

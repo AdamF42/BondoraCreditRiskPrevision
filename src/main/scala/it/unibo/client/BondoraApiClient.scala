@@ -1,5 +1,6 @@
-package Client
+package it.unibo.client
 
+import it.unibo.client.model.PublicDataset
 import io.circe
 import sttp.client._
 import sttp.client.circe._

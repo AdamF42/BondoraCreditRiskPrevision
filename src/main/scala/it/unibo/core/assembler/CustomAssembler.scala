@@ -1,4 +1,4 @@
-package Core.Assembler
+package it.unibo.core.assembler
 
 import org.apache.spark.ml.feature.VectorAssembler
 
