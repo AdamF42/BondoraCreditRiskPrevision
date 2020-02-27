@@ -59,7 +59,7 @@ object Main {
   private def getDataFrame()(implicit spark: SparkSession): DataFrame = {
 
     val preprocessor = DataPreprocessorFactory(spark)
-    val df = preprocessor.readFile("LoanData.csv")
+    val df = preprocessor.readFile("../LoanData.csv")
 
     preprocessor.normalize(df)
   }
