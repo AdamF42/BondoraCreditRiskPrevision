@@ -15,6 +15,9 @@ lazy val global = (project in file("."))
     ec2
   )
 
+  "com.typesafe.akka" %% "akka-stream" % akkaVersion,
+  "com.typesafe.akka" %% "akka-actor" % akkaVersion,
+  "com.typesafe.akka" %% "akka-http" % "10.1.11"
 lazy val core = (project in file("core"))
   .disablePlugins(AssemblyPlugin)
   .settings(
