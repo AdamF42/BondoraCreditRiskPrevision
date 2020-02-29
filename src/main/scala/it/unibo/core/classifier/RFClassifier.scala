@@ -2,9 +2,8 @@ package it.unibo.core.classifier
 
 import org.apache.spark.ml.classification.RandomForestClassifier
 
-private class RFClassifier() extends BaseClassifier {
-
-  private val rfClassifier = new RandomForestClassifier()
+private class RFClassifier(val rfClassifier: RandomForestClassifier = new RandomForestClassifier())
+  extends BaseClassifier {
 
   override def createTrainer(): RandomForestClassifier =
     rfClassifier
@@ -15,5 +14,5 @@ private class RFClassifier() extends BaseClassifier {
       .setSeed(1234L)
       .setLabelCol("Status")
 
-  override def getSavedModelName(): String = "rf.zip"
+  override def getSavedModelName: String = "/rf.zip"
 }

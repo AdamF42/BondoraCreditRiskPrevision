@@ -37,10 +37,10 @@ object Main {
     rfTrainer.saveModel()
 
     mlpTrainer.loadModel()
-    mlpTrainer.loadModel()
+    rfTrainer.loadModel()
 
     val mlpResult = mlpTrainer.evaluate(test)
-    val rfResult = mlpTrainer.evaluate(test)
+    val rfResult = rfTrainer.evaluate(test)
 
     println("MLP : " + mlpResult)
     println("RF  : " + rfResult)
@@ -49,8 +49,7 @@ object Main {
 
   private def getNormalizedDataFrame()(implicit spark: SparkSession): DataFrame = {
     val fs: FileSystem = FileSystem.get(spark.sparkContext.hadoopConfiguration)
-    val fileExists = fs.exists(new Path(normalizedDataSetPath))
-    if (fileExists) retrieveNormalizedDataFrame()
+    if (fs.exists(new Path(normalizedDataSetPath))) retrieveNormalizedDataFrame()
     else getDataFrame
   }
 
@@ -59,8 +58,6 @@ object Main {
       .option("header", value = true)
       .option("inferSchema", "true")
       .load(normalizedDataSetPath)
-
-  private def getDataFrame()(implicit spark: SparkSession): DataFrame = {
 
   private def getDataFrame()(implicit spark: SparkSession): DataFrame = {
 

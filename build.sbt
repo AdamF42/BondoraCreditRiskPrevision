@@ -27,6 +27,11 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % scalacticVersion % Test,
 )
 
+dependencyOverrides ++= Seq(
+  "com.fasterxml.jackson.core" % "jackson-core" % "2.9.8",
+  "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.8",
+  "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % "2.9.8"
+)
 
 scalacOptions ++= Seq(
   "-deprecation",
@@ -42,12 +47,6 @@ scalacOptions ++= Seq(
   "-Xfatal-warnings",
   "-Xfuture",
   "-Xlint"
-
-dependencyOverrides ++= Seq(
-  "com.fasterxml.jackson.core" % "jackson-core" % "2.9.8",
-  "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.8",
-  "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % "2.9.8"
 )
-
 
 licenses := Seq("The Apache Software License, Version 2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))
