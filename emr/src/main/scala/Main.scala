@@ -6,6 +6,7 @@ import it.unibo.normalizer.NormalizerFactory
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
+import sttp.client.ResponseError
 
 object Main {
 
@@ -41,6 +42,20 @@ object Main {
 
     println("MLP : " + mlpResult)
     println("RF  : " + rfResult)
+
+    val bondora: BondoraApiClient = new BondoraApiClient("")
+    val publicdataset: Either[ResponseError[circe.Error], PublicDataset] = bondora.getPublicDataset
+    publicdataset match {
+      case Right(x) => val df = PublicDatasetPayloadConverter.publicDStoDF(x.Payload)
+
+        val resultMLPClassify = mlpTrainer.classify(df)
+        println("MLP Classify (user,prediction) : " + resultMLPClassify)
+
+        val resultRFClassify = rfTrainer.classify(df)
+        println("RF Classify (user,prediction) : " + resultRFClassify)
+
+      case Left(x) => println(x)
+    }
 
   }
 

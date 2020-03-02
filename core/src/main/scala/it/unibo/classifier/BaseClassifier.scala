@@ -1,13 +1,16 @@
 package it.unibo.classifier
 
+import it.unibo.core.datapreprocessor.Columns
 import ml.combust.bundle.BundleFile
 import ml.combust.bundle.serializer.SerializationFormat
 import ml.combust.mleap.spark.SparkSupport._
-import org.apache.commons.lang.NotImplementedException
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.ml.bundle.SparkBundleContext
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
+import org.apache.spark.ml.feature.StringIndexer
 import org.apache.spark.ml.{Pipeline, PipelineStage, Transformer}
+import org.apache.spark.sql.functions.monotonically_increasing_id
+import org.apache.spark.sql.types.{BooleanType, DataType, StringType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import resource.managed
 
@@ -45,7 +48,62 @@ trait BaseClassifier {
     evaluator.evaluate(predictionAndLabels)
   }
 
-  def classify(): Unit = throw new NotImplementedException
+  def classify(df: DataFrame): List[(String, String)] = {
+
+    def castAllTypedColumnsTo(df: DataFrame, sourceType: DataType, targetType: DataType): DataFrame = {
+      df.schema.filter(_.dataType == sourceType).foldLeft(df) {
+        case (acc, col) => acc.withColumn(col.name, df(col.name).cast(targetType))
+      }
+    }
+
+    val predictionToLabel: Map[Double, String] = collection.immutable.HashMap(
+      0.0 -> "Late",
+      1.0 -> "Repaid"
+    )
+
+    val tmpDF = df
+      .withColumn("id", monotonically_increasing_id())
+      .drop(Columns.getBoolean: _*)
+
+    val dfChangeNumType: DataFrame = castAllTypedColumnsTo(
+      df.select(Columns.getBoolean.head, Columns.getBoolean.tail: _*), BooleanType, StringType)
+      .withColumn("id", monotonically_increasing_id())
+
+    val finalDF = tmpDF.join(dfChangeNumType, Seq("id")).drop("id")
+
+    val indexer: Array[StringIndexer] = finalDF
+      .select(Columns.getStrings.head, Columns.getStrings.tail: _*)
+      .columns.map { colName =>
+      new StringIndexer().setInputCol(colName).setOutputCol(colName + "Index").setHandleInvalid("skip")}
+
+    val testData: DataFrame = new Pipeline()
+      .setStages(indexer)
+      .fit(finalDF)
+      .transform(finalDF)
+      .drop(Columns.getStrings: _*)
+      .drop(Columns.getDate: _*)
+      .drop(Columns.getUseless.filter(x => !x.contains("UserName")): _*)
+
+    val test: DataFrame = testData.columns
+      .foldLeft(testData) { (newdf, colname) =>
+        newdf.withColumnRenamed(colname, colname
+          .replace("Index", ""))
+      }
+
+    val model: Transformer = pipelineModel.getOrElse(throw new ClassNotFoundException)
+
+    val classified:DataFrame = model.transform(test).select("prediction", "Status")
+
+    val pred = classified.select("prediction")
+      .collect
+      .map(x => predictionToLabel(x.getAs[Double]("prediction"))).toList
+
+    val user = df.select("UserName")
+      .collect
+      .map(each => each.getAs[String]("UserName")).toList
+
+    user zip pred
+  }
 
   def saveModel()(implicit spark: SparkSession): Unit = {
 

@@ -28,4 +28,9 @@ object Columns {
     "DateOfBirth",
     "LastPaymentOn")
 
+  def getBoolean = Seq("ActiveScheduleFirstPaymentReached",
+    "NewCreditCustomer",
+    "Restructured"
+  )
+
 }
