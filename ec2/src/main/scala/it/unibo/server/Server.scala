@@ -4,7 +4,9 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives.{get, _}
 import akka.http.scaladsl.server.Route
+import akka.stream.ActorMaterializer
 import it.unibo.server.model.{Response, User}
+
 
 object Server extends App {
 
@@ -21,11 +23,14 @@ object Server extends App {
       }
     }
 
+  val host = "0.0.0.0"
+  val port = 9000
 
   implicit val actorSystem: ActorSystem = ActorSystem("sttp-pres")
+  implicit val materializer: ActorMaterializer = ActorMaterializer()
 
   import actorSystem.dispatcher
 
-  Http().bindAndHandle(serverRoutes, "localhost", 51823).map(_ => println("Started"))
+  Http().bindAndHandle(serverRoutes, host, port).map(_ => println("Started"))
 
 }

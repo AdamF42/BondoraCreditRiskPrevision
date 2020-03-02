@@ -10,20 +10,6 @@ import org.scalatest.wordspec.AnyWordSpec
 class PublicDatasetPayloadConverterTest extends AnyWordSpec with Matchers {
 
   implicit val session: SparkSession = setupSparkSession
-
-  def setupSparkSession: SparkSession = {
-
-    val session = SparkSession
-      .builder
-      .master("local[*]")
-      .getOrCreate()
-    import org.apache.log4j.{Level, Logger}
-    val rootLogger = Logger.getRootLogger
-    rootLogger.setLevel(Level.ERROR)
-    session
-  }
-
-
   val payloadInput = new PublicDatasetPayload(
     Some("8a9b8f39-824a-48bf-bfe2-0f5ea2ab4b87"),
     Some(482243),
@@ -138,12 +124,22 @@ class PublicDatasetPayloadConverterTest extends AnyWordSpec with Matchers {
     None,
     None
   )
-
   val dfResult: DataFrame = PublicDatasetPayloadConverter.publicDStoDF(Seq(payloadInput))
-
   val dfExpected: DataFrame = session.read.format("csv")
     .option("header", value = true)
     .load("ec2/src/test/scala/it/unibo/publicdatasetconvert/test.csv")
+
+  def setupSparkSession: SparkSession = {
+
+    val session = SparkSession
+      .builder
+      .master("local[*]")
+      .getOrCreate()
+    import org.apache.log4j.{Level, Logger}
+    val rootLogger = Logger.getRootLogger
+    rootLogger.setLevel(Level.ERROR)
+    session
+  }
 
   "ConvertPublicDatasetPayload" should {
     "return a dataset with correct values in rows" in {
@@ -182,7 +178,6 @@ class PublicDatasetPayloadConverterTest extends AnyWordSpec with Matchers {
       dfResult.columns.toSeq.isEmpty shouldBe true
     }
   }
-
 
   private def castAllTypedColumnsTo(df: DataFrame, targetType: DataType): DataFrame = {
     df.schema.foldLeft(df) {
