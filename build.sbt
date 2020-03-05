@@ -21,29 +21,15 @@ lazy val core = (project in file("core"))
     name := "core",
     commonSettings,
     licenses := apacheLicense,
-    libraryDependencies ++= commonDependencies ++ Seq(
-      dependencies.mleapspark,
-      dependencies.mleapruntime,
-//      dependencies.scalaxml
-    ),
-    Compile / scalaSource := baseDirectory.value / "src" / "main" / "scala",
-    Test / javaSource := baseDirectory.value / "src" / "test" / "scala",
+    libraryDependencies ++= commonDependencies
   )
 
 lazy val emr = (project in file("emr"))
   .settings(
     name := "emr",
-    libraryDependencies ++= commonDependencies++ Seq(
-      dependencies.mleapspark,
-      dependencies.mleapruntime,
-//      dependencies.scalaxml
-    ),
+    libraryDependencies ++= commonDependencies,
     commonSettings,
-    licenses := apacheLicense,
-    Compile / scalaSource := baseDirectory.value / "src" / "main" / "scala",
     mainClass in assembly := Some("Main"),
-    assemblyJarName in assembly := s"${name.value}-assembly-${version.value}.jar",
-    javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
   )
   .dependsOn(
     core
@@ -53,26 +39,11 @@ lazy val ec2 = (project in file("ec2"))
   .settings(
     name := "ec2",
     commonSettings,
-    licenses := apacheLicense,
     libraryDependencies ++= commonDependencies ++ Seq(
       dependencies.sttpcore,
       dependencies.sttpcirce,
-      dependencies.circegeneric,
-      dependencies.scalactic,
-      dependencies.scalatest
-    ),
-    dependencyOverrides ++= Seq(
-      "com.fasterxml.jackson.core" % "jackson-core" % "2.9.8",
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.8",
-      "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % "2.9.8",
-      "io.circe" %% "circe-generic" % dependencies.circeVersion
-    ),
-    Compile / scalaSource := baseDirectory.value / "src" / "main" / "scala",
-    Test / javaSource := baseDirectory.value / "src" / "test" / "scala",
-    assemblyJarName in assembly := s"${name.value}-assembly-${version.value}.jar",
-    test in assembly := {},
-    javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
-
+      dependencies.circegeneric
+    ) ++ testDependencies
   )
 
 
@@ -92,7 +63,6 @@ lazy val dependencies =
     val sttpcirce = "com.softwaremill.sttp.client" %% "circe" % sttpVersion
     val mleapspark = "ml.combust.mleap" %% "mleap-spark" % mleapVersion exclude("org.spark-project.spark", "unused")
     val mleapruntime = "ml.combust.mleap" %% "mleap-runtime" % mleapVersion exclude("org.spark-project.spark", "unused")
-//    val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "2.0.0-M1"
     val circegeneric = "io.circe" %% "circe-generic" % circeVersion
     val scalactic = "org.scalactic" %% "scalactic" % scalacticVersion
     val scalatest = "org.scalatest" %% "scalatest" % scalacticVersion % Test
@@ -102,7 +72,9 @@ lazy val commonDependencies = Seq(
   dependencies.sparkstreaming,
   dependencies.sparkcore,
   dependencies.sparksql,
-  dependencies.sparkmllib
+  dependencies.sparkmllib,
+  dependencies.mleapspark,
+  dependencies.mleapruntime
 )
 
 lazy val testDependencies = Seq(
@@ -111,7 +83,13 @@ lazy val testDependencies = Seq(
 )
 
 lazy val commonSettings = Seq(
+  licenses := apacheLicense,
   scalacOptions ++= compilerOptions,
+  Compile / scalaSource := baseDirectory.value / "src" / "main" / "scala",
+  assemblyJarName in assembly := s"${name.value}-assembly-${version.value}.jar",
+  javacOptions ++= Seq("-source", "1.8", "-target", "1.8"),
+  Test / javaSource := baseDirectory.value / "src" / "test" / "scala",
+  test in assembly := {}
 )
 
 lazy val compilerOptions = Seq(

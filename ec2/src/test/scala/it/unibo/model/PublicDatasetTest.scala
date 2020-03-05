@@ -9,10 +9,23 @@ import org.scalatest.wordspec.AnyWordSpec
 
 class PublicDatasetTest extends AnyWordSpec with Matchers {
 
+
+
+//  implicit class EitherOps[A, B](e1: Either[A, B]) {
+//    def rightOrElse[A, B](e1: Either[A, B], e2: => Any) =
+//      e1 match {
+//        case Right(a) => Right(a)
+//        case Left(b) => e2
+//      }
+//
+//    def rightOrElse[B >: A](e1: Either[A, B], default: => B): B =
+//      if (e1.isRight) default else this
+//  }
+
   "PublicDataset" should {
     "decode correctly empty payload" in {
       val incomingJson =
-        parse(
+      parse(
           """{
                 "PageSize": 1000,
                 "PageNr": 100,
@@ -21,7 +34,7 @@ class PublicDatasetTest extends AnyWordSpec with Matchers {
                 "Payload": [],
                 "Success": false,
                 "Error": "error"
-              }""").getOrElse(Json.Null)
+              }""").right.getOrElse(Json.Null)
 
       PublicDataset.decoder.decodeJson(incomingJson) shouldBe Right(PublicDataset(
         PageSize = 1000,
@@ -162,10 +175,10 @@ class PublicDatasetTest extends AnyWordSpec with Matchers {
             |    ],
             |    "Success": true,
             |    "Errors": null
-            |}""".stripMargin).getOrElse(Json.Null)
+            |}""".stripMargin).right.getOrElse(Json.Null)
 
       val result = PublicDataset.decoder.decodeJson(incomingJson)
-      val payload: Seq[PublicDatasetPayload] = result.getOrElse(PublicDatasetEmpty).Payload
+      val payload: Seq[PublicDatasetPayload] = result.right.getOrElse(PublicDatasetEmpty).Payload
 
       result shouldBe Right(model.PublicDataset(
         PageSize = 1000,
