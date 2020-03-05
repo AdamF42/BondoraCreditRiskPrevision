@@ -21,7 +21,7 @@ object PublicDatasetPayloadConverter {
     spark.sparkContext.parallelize(rows)
   }
 
-  private def getSchema(mapsColumnValue: Seq[Map[String, Any]])(implicit spark: SparkSession) = {
+  private def getSchema(mapsColumnValue: Seq[Map[String, Any]]) = {
 
     val firstElement: Map[String, Any] = mapsColumnValue.headOption getOrElse Map.empty[String, Any]
 
