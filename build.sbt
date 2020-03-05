@@ -2,38 +2,116 @@ import sbt.Keys.libraryDependencies
 
 name := "BondoraCreditRiskPrevision"
 
-version := "0.1"
+ThisBuild / version := "0.1"
 
-scalaVersion := "2.12.10"
+ThisBuild / scalaVersion := "2.12.10"
 
-lazy val circeVersion = "0.13.0"
-lazy val sparkVersion = "2.4.4"
-lazy val sttpVersion = "2.0.0-M1"
-lazy val mleapVersion = "0.15.0"
-lazy val scalacticVersion = "3.1.0"
+lazy val global = (project in file("."))
+  .settings(commonSettings)
+  .disablePlugins(AssemblyPlugin)
+  .aggregate(
+    core,
+    emr,
+    ec2
+  )
 
-libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-streaming" % sparkVersion,
-  "org.apache.spark" %% "spark-core" % sparkVersion,
-  "org.apache.spark" %% "spark-sql" % sparkVersion,
-  "org.apache.spark" %% "spark-mllib" % sparkVersion,
-  "com.softwaremill.sttp.client" %% "core" % sttpVersion,
-  "com.softwaremill.sttp.client" %% "circe" % sttpVersion,
-  "ml.combust.mleap" %% "mleap-spark" % mleapVersion,
-  "ml.combust.mleap" %% "mleap-runtime" % mleapVersion,
-  "org.scala-lang.modules" %% "scala-xml" % "2.0.0-M1",
-  "io.circe" %% "circe-generic" % circeVersion,
-  "org.scalactic" %% "scalactic" % scalacticVersion,
-  "org.scalatest" %% "scalatest" % scalacticVersion % Test,
+lazy val core = (project in file("core"))
+  .disablePlugins(AssemblyPlugin)
+  .settings(
+    name := "core",
+    commonSettings,
+    licenses := apacheLicense,
+    libraryDependencies ++= commonDependencies ++ Seq(
+      dependencies.mleapspark,
+      dependencies.mleapruntime,
+      dependencies.scalaxml
+    ),
+    Compile / scalaSource := baseDirectory.value / "src" / "main" / "scala",
+    Test / javaSource := baseDirectory.value / "src" / "test" / "scala",
+    javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
+  )
+
+lazy val emr = (project in file("emr"))
+  .settings(
+    name := "emr",
+    libraryDependencies ++= commonDependencies,
+    commonSettings,
+    licenses := apacheLicense,
+    Compile / scalaSource := baseDirectory.value / "src" / "main" / "scala",
+    mainClass in assembly := Some("Main"),
+    assemblyJarName in assembly := s"${name.value}-assembly-${version.value}.jar",
+    javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
+  )
+  .dependsOn(
+    core
+  )
+
+lazy val ec2 = (project in file("ec2"))
+  .settings(
+    name := "ec2",
+    commonSettings,
+    licenses := apacheLicense,
+    libraryDependencies ++= commonDependencies ++ Seq(
+      dependencies.sttpcore,
+      dependencies.sttpcirce,
+      dependencies.circegeneric,
+      dependencies.scalactic,
+      dependencies.scalatest
+    ),
+    dependencyOverrides ++= Seq(
+      "com.fasterxml.jackson.core" % "jackson-core" % "2.9.8",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.8",
+      "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % "2.9.8",
+      "io.circe" %% "circe-generic" % dependencies.circeVersion
+    ),
+    Compile / scalaSource := baseDirectory.value / "src" / "main" / "scala",
+    Test / javaSource := baseDirectory.value / "src" / "test" / "scala",
+    assemblyJarName in assembly := s"${name.value}-assembly-${version.value}.jar",
+    test in assembly := {},
+    javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
+
+  )
+
+
+lazy val dependencies =
+  new {
+    val circeVersion = "0.12.1"
+    val sparkVersion = "2.4.4"
+    val sttpVersion = "2.0.0-M1"
+    val mleapVersion = "0.15.0"
+    val scalacticVersion = "3.1.0"
+
+    val sparkstreaming = "org.apache.spark" %% "spark-streaming" % sparkVersion % "provided"
+    val sparkcore = "org.apache.spark" %% "spark-core" % sparkVersion % "provided"
+    val sparksql = "org.apache.spark" %% "spark-sql" % sparkVersion % "provided"
+    val sparkmllib = "org.apache.spark" %% "spark-mllib" % sparkVersion % "provided"
+    val sttpcore = "com.softwaremill.sttp.client" %% "core" % sttpVersion
+    val sttpcirce = "com.softwaremill.sttp.client" %% "circe" % sttpVersion
+    val mleapspark = "ml.combust.mleap" %% "mleap-spark" % mleapVersion exclude("org.spark-project.spark", "unused")
+    val mleapruntime = "ml.combust.mleap" %% "mleap-runtime" % mleapVersion exclude("org.spark-project.spark", "unused")
+    val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "2.0.0-M1"
+    val circegeneric = "io.circe" %% "circe-generic" % circeVersion
+    val scalactic = "org.scalactic" %% "scalactic" % scalacticVersion
+    val scalatest = "org.scalatest" %% "scalatest" % scalacticVersion % Test
+  }
+
+lazy val commonDependencies = Seq(
+  dependencies.sparkstreaming,
+  dependencies.sparkcore,
+  dependencies.sparksql,
+  dependencies.sparkmllib
 )
 
-dependencyOverrides ++= Seq(
-  "com.fasterxml.jackson.core" % "jackson-core" % "2.9.8",
-  "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.8",
-  "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % "2.9.8"
+lazy val testDependencies = Seq(
+  dependencies.scalatest,
+  dependencies.scalactic
 )
 
-scalacOptions ++= Seq(
+lazy val commonSettings = Seq(
+  scalacOptions ++= compilerOptions,
+)
+
+lazy val compilerOptions = Seq(
   "-deprecation",
   "-encoding",
   "utf-8",
@@ -49,4 +127,4 @@ scalacOptions ++= Seq(
   "-Xlint"
 )
 
-licenses := Seq("The Apache Software License, Version 2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))
+lazy val apacheLicense = Seq("The Apache Software License, Version 2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))
