@@ -4,7 +4,7 @@ name := "BondoraCreditRiskPrevision"
 
 ThisBuild / version := "0.1"
 
-ThisBuild / scalaVersion := "2.12.10"
+ThisBuild / scalaVersion := "2.11.12"
 
 lazy val global = (project in file("."))
   .settings(commonSettings)
@@ -24,17 +24,20 @@ lazy val core = (project in file("core"))
     libraryDependencies ++= commonDependencies ++ Seq(
       dependencies.mleapspark,
       dependencies.mleapruntime,
-      dependencies.scalaxml
+//      dependencies.scalaxml
     ),
     Compile / scalaSource := baseDirectory.value / "src" / "main" / "scala",
     Test / javaSource := baseDirectory.value / "src" / "test" / "scala",
-    javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
   )
 
 lazy val emr = (project in file("emr"))
   .settings(
     name := "emr",
-    libraryDependencies ++= commonDependencies,
+    libraryDependencies ++= commonDependencies++ Seq(
+      dependencies.mleapspark,
+      dependencies.mleapruntime,
+//      dependencies.scalaxml
+    ),
     commonSettings,
     licenses := apacheLicense,
     Compile / scalaSource := baseDirectory.value / "src" / "main" / "scala",
@@ -75,7 +78,7 @@ lazy val ec2 = (project in file("ec2"))
 
 lazy val dependencies =
   new {
-    val circeVersion = "0.12.1"
+    val circeVersion = "0.11.1"
     val sparkVersion = "2.4.4"
     val sttpVersion = "2.0.0-M1"
     val mleapVersion = "0.15.0"
@@ -89,7 +92,7 @@ lazy val dependencies =
     val sttpcirce = "com.softwaremill.sttp.client" %% "circe" % sttpVersion
     val mleapspark = "ml.combust.mleap" %% "mleap-spark" % mleapVersion exclude("org.spark-project.spark", "unused")
     val mleapruntime = "ml.combust.mleap" %% "mleap-runtime" % mleapVersion exclude("org.spark-project.spark", "unused")
-    val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "2.0.0-M1"
+//    val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "2.0.0-M1"
     val circegeneric = "io.circe" %% "circe-generic" % circeVersion
     val scalactic = "org.scalactic" %% "scalactic" % scalacticVersion
     val scalatest = "org.scalatest" %% "scalatest" % scalacticVersion % Test

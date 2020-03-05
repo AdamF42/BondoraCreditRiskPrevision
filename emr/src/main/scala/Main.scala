@@ -10,9 +10,6 @@ import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 object Main {
 
   val normalizedDataSetPath: String = "../normalized.csv"
-  val baseDir: String = System.getProperty("user.dir") + "/models"
-  val mlpPath: String = "/mlp.zip"
-  val rfUri: String = "/rf.zip"
 
   def main(args: Array[String]): Unit = {
 
