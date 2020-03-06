@@ -7,7 +7,6 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.ml.bundle.SparkBundleContext
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
 import org.apache.spark.ml.{Pipeline, PipelineStage, Transformer}
-import org.apache.spark.sql.types.DataType
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import resource.managed
 
