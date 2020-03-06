@@ -2,7 +2,7 @@ package it.unibo.client.model
 
 import io.circe.Decoder
 import io.circe.generic.semiauto.deriveDecoder
-import org.apache.spark.sql.types.{BooleanType, DataType, DoubleType, IntegerType, StringType}
+import org.apache.spark.sql.types._
 
 sealed trait DataSetModelBase {
 

@@ -48,6 +48,10 @@ lazy val ec2 = (project in file("ec2"))
     ) ++ testDependencies,
     mainClass in assembly := Some("it.unibo.server.Server")
   )
+  .dependsOn(
+    core
+  )
+
 
 lazy val dependencies =
   new {

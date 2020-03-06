@@ -1,4 +1,4 @@
-package it.unibo.publicdatasetconvert
+package it.unibo.converter
 
 import it.unibo.client.model.PublicDatasetPayload
 import org.apache.spark.sql.types.{StructField, StructType}
