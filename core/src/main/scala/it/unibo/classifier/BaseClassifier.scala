@@ -21,6 +21,10 @@ trait BaseClassifier {
   private val trainer: PipelineStage = createTrainer()
   private var pipelineModel: Option[Transformer] = None
   private var trainDataFrame: Option[DataFrame] = None
+  private val predictionToLabel: Map[Double, String] = collection.immutable.HashMap(
+    0.0 -> "Late",
+    1.0 -> "Repaid"
+  )
 
   def getSavedModelName: String
 
@@ -56,25 +60,25 @@ trait BaseClassifier {
       }
     }
 
-    val predictionToLabel: Map[Double, String] = collection.immutable.HashMap(
-      0.0 -> "Late",
-      1.0 -> "Repaid"
-    )
+    def cleanDF(df: DataFrame): DataFrame = {
+      val booleanDF = df
+        .withColumn("id", monotonically_increasing_id())
+        .drop(Columns.getBoolean: _*)
 
-    val tmpDF = df
-      .withColumn("id", monotonically_increasing_id())
-      .drop(Columns.getBoolean: _*)
+      val dfChangeBoolType: DataFrame = castAllTypedColumnsTo(
+        df.select(Columns.getBoolean.head, Columns.getBoolean.tail: _*), BooleanType, StringType)
+        .withColumn("id", monotonically_increasing_id())
 
-    val dfChangeNumType: DataFrame = castAllTypedColumnsTo(
-      df.select(Columns.getBoolean.head, Columns.getBoolean.tail: _*), BooleanType, StringType)
-      .withColumn("id", monotonically_increasing_id())
+      booleanDF.join(dfChangeBoolType, Seq("id")).drop("id")
+    }
 
-    val finalDF = tmpDF.join(dfChangeNumType, Seq("id")).drop("id")
+    val finalDF = cleanDF(df)
 
     val indexer: Array[StringIndexer] = finalDF
       .select(Columns.getStrings.head, Columns.getStrings.tail: _*)
       .columns.map { colName =>
-      new StringIndexer().setInputCol(colName).setOutputCol(colName + "Index").setHandleInvalid("skip")}
+      new StringIndexer().setInputCol(colName).setOutputCol(colName + "Index").setHandleInvalid("skip")
+    }
 
     val testData: DataFrame = new Pipeline()
       .setStages(indexer)
@@ -92,14 +96,12 @@ trait BaseClassifier {
 
     val model: Transformer = pipelineModel.getOrElse(throw new ClassNotFoundException)
 
-    val classified:DataFrame = model.transform(test).select("prediction", "Status")
+    val classified: DataFrame = model.transform(test).select("prediction", "Status")
 
-    val pred = classified.select("prediction")
-      .collect
+    val pred = classified.select("prediction").collect
       .map(x => predictionToLabel(x.getAs[Double]("prediction"))).toList
 
-    val user = df.select("UserName")
-      .collect
+    val user = df.select("UserName").collect
       .map(each => each.getAs[String]("UserName")).toList
 
     user zip pred
