@@ -9,19 +9,6 @@ import org.scalatest.wordspec.AnyWordSpec
 
 class PublicDatasetTest extends AnyWordSpec with Matchers {
 
-
-
-//  implicit class EitherOps[A, B](e1: Either[A, B]) {
-//    def rightOrElse[A, B](e1: Either[A, B], e2: => Any) =
-//      e1 match {
-//        case Right(a) => Right(a)
-//        case Left(b) => e2
-//      }
-//
-//    def rightOrElse[B >: A](e1: Either[A, B], default: => B): B =
-//      if (e1.isRight) default else this
-//  }
-
   "PublicDataset" should {
     "decode correctly empty payload" in {
       val incomingJson =
