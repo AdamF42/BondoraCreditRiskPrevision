@@ -6,6 +6,8 @@ trait BaseDataPreprocessor {
 
   def readFile(filePath: String): DataFrame
 
-  def normalize(df: DataFrame): DataFrame
+  def normalizeToTrain(df: DataFrame): DataFrame
+
+  def normalizeToClassify(df: DataFrame): DataFrame
 
 }
