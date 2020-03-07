@@ -19,8 +19,7 @@ object Main {
 
     implicit val spark: SparkSession = setupSparkSession
 
-    val bucketName: String = args.headOption getOrElse ".."
-    val basePath = "s3://" + bucketName
+    val basePath: String = args.headOption getOrElse ".."
 
     val normalized: DataFrame = getNormalizedDataFrame(basePath)
 
