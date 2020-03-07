@@ -1,3 +1,6 @@
+import java.net.URI
+
+import it.unibo.S3Load
 import it.unibo.assembler.AssemblerFactory
 import it.unibo.classifier.ClassifierFactory
 import it.unibo.classifier.ClassifierFactory.{MLP, RF}
@@ -9,13 +12,17 @@ import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
 object Main {
 
-  val normalizedDataSetPath: String = "../normalized.csv"
+  val normalizedDataSetPath: String = "/normalized.csv"
+  val originDataSetPath: String = "/LoanData.csv"
 
   def main(args: Array[String]): Unit = {
 
     implicit val spark: SparkSession = setupSparkSession
 
-    val normalized: DataFrame = getNormalizedDataFrame
+    val bucketName: String = args.headOption getOrElse ".."
+    val basePath = "s3://" + bucketName
+
+    val normalized: DataFrame = getNormalizedDataFrame(basePath)
 
     val splits = normalized.randomSplit(Array(0.6, 0.4), seed = 1234L)
     val train: Dataset[Row] = splits(0)
@@ -30,11 +37,21 @@ object Main {
     mlpTrainer.train(train, Array(assembler, normalizer))
     rfTrainer.train(train, Array(assembler, normalizer))
 
+    S3Load.createModelFolder()
+
     mlpTrainer.saveModel()
     rfTrainer.saveModel()
 
+    S3Load.copyModelToS3("mlp", bucketName)
+    S3Load.copyModelToS3("rf", bucketName)
+
+    S3Load.copyModelFromS3("mlp", bucketName)
+    S3Load.copyModelFromS3("rf", bucketName)
+
     mlpTrainer.loadModel()
     rfTrainer.loadModel()
+
+    println("EVALUATING TRAINING OF MODELS")
 
     val mlpResult = mlpTrainer.evaluate(test)
     val rfResult = rfTrainer.evaluate(test)
@@ -44,22 +61,23 @@ object Main {
 
   }
 
-  private def getNormalizedDataFrame()(implicit spark: SparkSession): DataFrame = {
-    val fs: FileSystem = FileSystem.get(spark.sparkContext.hadoopConfiguration)
-    if (fs.exists(new Path(normalizedDataSetPath))) retrieveNormalizedDataFrame()
-    else getDataFrame
+  private def getNormalizedDataFrame(root: String)(implicit spark: SparkSession): DataFrame = {
+    val conf = spark.sparkContext.hadoopConfiguration
+    val fs = FileSystem.get(URI.create(root), conf)
+    if (fs.exists(new Path(root + normalizedDataSetPath))) retrieveNormalizedDataFrame(root)
+    else getDataFrame(root)
   }
 
-  private def retrieveNormalizedDataFrame()(implicit spark: SparkSession): DataFrame =
+  private def retrieveNormalizedDataFrame(root: String)(implicit spark: SparkSession): DataFrame =
     spark.read.format("csv")
       .option("header", value = true)
       .option("inferSchema", "true")
-      .load(normalizedDataSetPath)
+      .load(root + normalizedDataSetPath)
 
-  private def getDataFrame()(implicit spark: SparkSession): DataFrame = {
+  private def getDataFrame(root: String)(implicit spark: SparkSession): DataFrame = {
 
     val preprocessor = DataPreprocessorFactory(spark)
-    val df = preprocessor.readFile("../LoanData.csv")
+    val df = preprocessor.readFile(root + originDataSetPath)
 
     preprocessor.normalizeToTrain(df)
   }
@@ -69,7 +87,7 @@ object Main {
     val session = SparkSession
       .builder
       .appName("BondoraCreditRiskPrevision")
-      .master("local[*]")
+//      .master("local[*]")
       .getOrCreate()
     setupLogging()
     session
