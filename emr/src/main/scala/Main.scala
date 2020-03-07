@@ -41,11 +41,11 @@ object Main {
     mlpTrainer.saveModel()
     rfTrainer.saveModel()
 
-    S3Load.copyModelToS3("mlp", bucketName)
-    S3Load.copyModelToS3("rf", bucketName)
+    S3Load.copyModelToS3("mlp", basePath)
+    S3Load.copyModelToS3("rf", basePath)
 
-    S3Load.copyModelFromS3("mlp", bucketName)
-    S3Load.copyModelFromS3("rf", bucketName)
+    S3Load.copyModelFromS3("mlp", basePath)
+    S3Load.copyModelFromS3("rf", basePath)
 
     mlpTrainer.loadModel()
     rfTrainer.loadModel()
