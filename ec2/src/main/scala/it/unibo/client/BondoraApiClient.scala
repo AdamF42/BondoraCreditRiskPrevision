@@ -1,16 +1,17 @@
 package it.unibo.client
 
-import io.circe
+import it.unibo.client.environment.Environment
 import it.unibo.client.model.PublicDataset
 import sttp.client._
 import sttp.client.circe._
+import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
-class BondoraApiClient(authToken: String) {
+class BondoraApiClient(env: Environment) extends Client {
 
-  private lazy val baseRequest = basicRequest.auth.bearer(authToken)
-  private lazy val baseRestUri: Uri = uri"https://api.bondora.com"
+  private lazy val baseRequest = basicRequest.auth.bearer(env.outhToken)
+  private lazy val baseRestUri: Uri = uri"${env.url}"
 
-  def getPublicDataset: Either[ResponseError[circe.Error], PublicDataset] = {
+  def getPublicDataset: PublicDataset = {
 
     implicit val backend: SttpBackend[Identity, Nothing] = HttpURLConnectionBackend()
 
@@ -21,7 +22,7 @@ class BondoraApiClient(authToken: String) {
       .get(url)
       .response(asJson[PublicDataset])
 
-    request.send().body
+    request.send().body.right.getOrElse(throw new NotImplementedException)
   }
 
 }

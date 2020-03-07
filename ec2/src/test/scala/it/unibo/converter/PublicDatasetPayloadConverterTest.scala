@@ -1,15 +1,34 @@
 package it.unibo.converter
 
 import it.unibo.client.model.PublicDatasetPayload
+import it.unibo.sparksession.Configuration
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.types.{DataType, StringType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.scalamock.scalatest.MockFactory
+import org.scalatest.OneInstancePerTest
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 
-class PublicDatasetPayloadConverterTest extends AnyWordSpec with Matchers {
+class PublicDatasetPayloadConverterTest extends AnyWordSpec with OneInstancePerTest with MockFactory with Matchers {
 
-  implicit val session: SparkSession = setupSparkSession
+  val mockConfiguration: Configuration = mock[Configuration]
+
+  (mockConfiguration.getOrCreateSession _).expects().returning({
+    val session = SparkSession
+      .builder
+      .appName("BondoraCreditRiskPrevision")
+      .master("local[*]")
+      .getOrCreate()
+    Logger.getRootLogger.setLevel(Level.ERROR)
+    session
+  }
+  ).atLeastOnce()
+
+
+  implicit val sparkConfiguration: Configuration = mockConfiguration
+
   val payloadInput = new PublicDatasetPayload(
     Some("8a9b8f39-824a-48bf-bfe2-0f5ea2ab4b87"),
     Some(482243),
@@ -125,21 +144,9 @@ class PublicDatasetPayloadConverterTest extends AnyWordSpec with Matchers {
     None
   )
   val dfResult: DataFrame = PublicDatasetPayloadConverter.publicDStoDF(Seq(payloadInput))
-  val dfExpected: DataFrame = session.read.format("csv")
+  val dfExpected: DataFrame = mockConfiguration.getOrCreateSession.read.format("csv")
     .option("header", value = true)
-    .load("ec2/src/test/scala/it/unibo/publicdatasetconvert/test.csv")
-
-  def setupSparkSession: SparkSession = {
-
-    val session = SparkSession
-      .builder
-      .master("local[*]")
-      .getOrCreate()
-    import org.apache.log4j.{Level, Logger}
-    val rootLogger = Logger.getRootLogger
-    rootLogger.setLevel(Level.ERROR)
-    session
-  }
+    .load("ec2/src/test/scala/it/unibo/converter/test.csv")
 
   "ConvertPublicDatasetPayload" should {
     "return a dataset with correct values in rows" in {

@@ -6,9 +6,9 @@ import it.unibo.classifier.ClassifierFactory
 import it.unibo.classifier.ClassifierFactory.{MLP, RF}
 import it.unibo.datapreprocessor.DataPreprocessorFactory
 import it.unibo.normalizer.NormalizerFactory
+import it.unibo.sparksession.{Configuration, SparkConfiguration}
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, Row}
 
 object Main {
 
@@ -18,7 +18,7 @@ object Main {
 
   def main(args: Array[String]): Unit = {
 
-    implicit val spark: SparkSession = setupSparkSession
+    implicit val sparkConfiguration: SparkConfiguration = new SparkConfiguration()
 
     val basePath: String = args.headOption getOrElse ".."
 
@@ -42,7 +42,7 @@ object Main {
     mlpTrainer.saveModel()
     rfTrainer.saveModel()
 
-    if(basePath.matches(patterns3bucket)) {
+    if (basePath.matches(patterns3bucket)) {
 
       S3Load.copyModelToS3("mlp", basePath)
       S3Load.copyModelToS3("rf", basePath)
@@ -63,41 +63,25 @@ object Main {
 
   }
 
-  private def getNormalizedDataFrame(root: String)(implicit spark: SparkSession): DataFrame = {
-    val conf = spark.sparkContext.hadoopConfiguration
+  private def getNormalizedDataFrame(root: String)(implicit sparkConfiguration: Configuration): DataFrame = {
+    val conf = sparkConfiguration.getOrCreateSession.sparkContext.hadoopConfiguration
     val fs = FileSystem.get(URI.create(root), conf)
     if (fs.exists(new Path(root + normalizedDataSetPath))) retrieveNormalizedDataFrame(root)
     else getDataFrame(root)
   }
 
-  private def retrieveNormalizedDataFrame(root: String)(implicit spark: SparkSession): DataFrame =
-    spark.read.format("csv")
+  private def retrieveNormalizedDataFrame(root: String)(implicit sparkConfiguration: Configuration): DataFrame =
+    sparkConfiguration.getOrCreateSession.read.format("csv")
       .option("header", value = true)
       .option("inferSchema", "true")
       .load(root + normalizedDataSetPath)
 
-  private def getDataFrame(root: String)(implicit spark: SparkSession): DataFrame = {
+  private def getDataFrame(root: String)(implicit sparkConfiguration: Configuration): DataFrame = {
 
-    val preprocessor = DataPreprocessorFactory(spark)
-    val df = preprocessor.readFile(root + originDataSetPath)
+    val preprocessor = DataPreprocessorFactory()
+    val df = preprocessor.readFile("../LoanData.csv")
 
     preprocessor.normalizeToTrain(df)
-  }
-
-  def setupSparkSession: SparkSession = {
-
-    val session = SparkSession
-      .builder
-      .appName("BondoraCreditRiskPrevision")
-      .master("local[*]")
-      .getOrCreate()
-    setupLogging()
-    session
-  }
-
-  def setupLogging(): Unit = {
-    val rootLogger = Logger.getRootLogger
-    rootLogger.setLevel(Level.ERROR)
   }
 
 }

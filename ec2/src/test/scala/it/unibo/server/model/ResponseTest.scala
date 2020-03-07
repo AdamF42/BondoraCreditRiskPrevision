@@ -15,8 +15,9 @@ class ResponseTest extends AnyWordSpec with Matchers {
         """{
           |  "users" : [
           |    {
-          |      "userId" : 1,
-          |      "label" : "Paid"
+          |      "userId" : "BO6KKK763",
+          |      "mlpLabel" : "Late",
+          |      "rfLabel" : "Late"
           |    }
           |  ],
           |  "success" : true,
@@ -24,7 +25,7 @@ class ResponseTest extends AnyWordSpec with Matchers {
           |}""".stripMargin)
         .right.getOrElse(Json.Null)
 
-      val actual = Response(Seq(User(1, "Paid")), success = true, "").asJson
+      val actual = Response(Seq(User("BO6KKK763", "Late", "Late")), success = true, "").asJson
 
       actual shouldBe expected
 
