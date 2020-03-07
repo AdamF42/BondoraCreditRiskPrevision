@@ -3,7 +3,6 @@ package it.unibo.classifier
 import ml.combust.bundle.BundleFile
 import ml.combust.bundle.serializer.SerializationFormat
 import ml.combust.mleap.spark.SparkSupport._
-import org.apache.commons.lang.NotImplementedException
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.ml.bundle.SparkBundleContext
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
@@ -16,6 +15,10 @@ trait BaseClassifier {
   private val baseDir: String = System.getProperty("user.dir") + "/models"
   private val modelName: String = getSavedModelName
   private val trainer: PipelineStage = createTrainer()
+  private val predictionToLabel: Map[Double, String] = collection.immutable.HashMap(
+    0.0 -> "Late",
+    1.0 -> "Repaid"
+  )
   private var pipelineModel: Option[Transformer] = None
   private var trainDataFrame: Option[DataFrame] = None
 
@@ -45,7 +48,20 @@ trait BaseClassifier {
     evaluator.evaluate(predictionAndLabels)
   }
 
-  def classify(): Unit = throw new NotImplementedException
+  def classify(df: DataFrame): List[(String, String)] = {
+
+    val model: Transformer = pipelineModel.getOrElse(throw new ClassNotFoundException)
+
+    val classified: DataFrame = model.transform(df).select("prediction", "Status")
+
+    val pred = classified.select("prediction").collect
+      .map(x => predictionToLabel(x.getAs[Double]("prediction"))).toList
+
+    val user = df.select("UserName").collect
+      .map(each => each.getAs[String]("UserName")).toList
+
+    user zip pred
+  }
 
   def saveModel()(implicit spark: SparkSession): Unit = {
 

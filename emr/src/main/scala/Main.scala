@@ -61,7 +61,7 @@ object Main {
     val preprocessor = DataPreprocessorFactory(spark)
     val df = preprocessor.readFile("../LoanData.csv")
 
-    preprocessor.normalize(df)
+    preprocessor.normalizeToTrain(df)
   }
 
   def setupSparkSession: SparkSession = {

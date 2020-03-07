@@ -5,7 +5,7 @@ import org.apache.spark.ml.feature.{StringIndexer, VectorAssembler}
 import org.apache.spark.ml.linalg.Matrix
 import org.apache.spark.ml.stat.Correlation
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{DataType, DoubleType, StringType}
+import org.apache.spark.sql.types.{BooleanType, DataType, DoubleType, StringType}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
 private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocessor {
@@ -15,7 +15,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
       .option("header", value = true)
       .load(filePath)
 
-  override def normalize(df: DataFrame): DataFrame = {
+  override def normalizeToTrain(df: DataFrame): DataFrame = {
 
     val dfEndedLoans = filterEndedLoans(df)
 
@@ -32,7 +32,62 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
     dfReduced.na.fill(map)
   }
 
-  private def removeUselessColumns(df: Dataset[Row]) = {
+  override def normalizeToClassify(df: DataFrame): DataFrame = {
+
+    val correctTypeDF = transformValuesToString(df)
+
+    indexColumnsValues(correctTypeDF)
+      .drop(Columns.getDate: _*)
+      .drop(Columns.getUseless.filter(x => !x.contains("UserName")): _*)
+  }
+
+  private def transformValuesToString(df: DataFrame): DataFrame = {
+    val stringDF = df
+      .withColumn("id", monotonically_increasing_id())
+      .drop(Columns.getBoolean: _*)
+
+    val dfChangeBoolType: DataFrame = castAllTypedColumnsTo(
+      df.select(Columns.getBoolean.head, Columns.getBoolean.tail: _*), BooleanType, StringType)
+      .withColumn("id", monotonically_increasing_id())
+
+    stringDF.join(dfChangeBoolType, Seq("id")).drop("id")
+  }
+
+  private def castAllTypedColumnsTo(df: DataFrame, sourceType: DataType, targetType: DataType): DataFrame = {
+    df.schema.filter(_.dataType == sourceType).foldLeft(df) {
+      case (acc, col) => acc.withColumn(col.name, df(col.name).cast(targetType))
+    }
+  }
+
+  private def indexColumnsValues(df: DataFrame): DataFrame = {
+
+    val indexers = createIndex(df)
+
+    val dfIndexed: DataFrame = new Pipeline()
+      .setStages(indexers)
+      .fit(df)
+      .transform(df)
+      .drop(Columns.getStrings: _*)
+
+    removeIndexName(dfIndexed)
+  }
+
+  private def createIndex(dataFrame: DataFrame): Array[StringIndexer] =
+    dataFrame
+      .select(Columns.getStrings.head, Columns.getStrings.tail: _*)
+      .columns.map { colName =>
+      new StringIndexer().setInputCol(colName).setOutputCol(colName + "Index").setHandleInvalid("skip")
+    }
+
+  private def removeIndexName(df: DataFrame): DataFrame = {
+    df.columns
+      .foldLeft(df) { (newdf, colname) =>
+        newdf.withColumnRenamed(colname, colname
+          .replace("Index", ""))
+      }
+  }
+
+  private def removeUselessColumns(df: Dataset[Row]): DataFrame = {
 
     val colsDrop: Array[String] = getColumnsWithNullValues(df)
 
@@ -61,38 +116,21 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
       .headOption.getOrElse(Map.empty[String, Any])
   }
 
-  private def indexColumnsValues(df: DataFrame) = {
-
-    val indexers = createIndex(df)
-
-    val dfIndexed: DataFrame = new Pipeline()
-      .setStages(indexers)
-      .fit(df)
-      .transform(df)
-      .drop(Columns.getStrings: _*)
-      .cache()
-
-    dfIndexed.columns
-      .foldLeft(dfIndexed) { (newdf, colname) =>
-        newdf.withColumnRenamed(colname, colname
-          .replace("Index", ""))
-      }
-  }
-
-  private def transformValuesToDouble(df: DataFrame) = {
+  private def transformValuesToDouble(df: DataFrame): DataFrame = {
 
     val numericalCols: Seq[String] = df.columns.filter(c => !Columns.getStrings.contains(c))
     val dfNumerical: DataFrame = df.drop(Columns.getStrings: _*)
+
     val dfChangeNumType: DataFrame = castAllTypedColumnsTo(dfNumerical, StringType, DoubleType)
       .withColumn("id", monotonically_increasing_id())
 
     val dfLexical: DataFrame = df.drop(numericalCols: _*)
-    val tmpDFString = dfLexical.withColumn("id", monotonically_increasing_id())
+      .withColumn("id", monotonically_increasing_id())
 
-    dfChangeNumType.join(tmpDFString, Seq("id")).drop("id")
+    dfChangeNumType.join(dfLexical, Seq("id")).drop("id")
   }
 
-  private def getColumnsWithNullValues(dfEndedLoans: Dataset[Row]) = {
+  private def getColumnsWithNullValues(dfEndedLoans: Dataset[Row]): Array[String] = {
 
     val nullValuePerCol = countNullValue(dfEndedLoans)
     val nullThreshold = 20 * dfEndedLoans.count / 100
@@ -120,7 +158,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
     dropColumnsWithHighCorr(df.drop(mostCorrelatedCol))
   }
 
-  private def getCorrelatedColumns(df: DataFrame) = {
+  private def getCorrelatedColumns(df: DataFrame): DataFrame = {
 
     val correlationMatrix: Matrix = getCorrelationMatrix(df)
 
@@ -161,17 +199,4 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
     df.columns
       .map(x => (x, df.filter(df(x).isNull || df(x) === "" || df(x).isNaN).count))
   }
-
-  private def castAllTypedColumnsTo(df: DataFrame, sourceType: DataType, targetType: DataType): DataFrame = {
-    df.schema.filter(_.dataType == sourceType).foldLeft(df) {
-      case (acc, col) => acc.withColumn(col.name, df(col.name).cast(targetType))
-    }
-  }
-
-  private def createIndex(dataFrame: DataFrame) =
-    dataFrame
-      .select(Columns.getStrings.head, Columns.getStrings.tail: _*)
-      .columns.map { colName =>
-      new StringIndexer().setInputCol(colName).setOutputCol(colName + "Index").setHandleInvalid("skip")
-    }
 }
