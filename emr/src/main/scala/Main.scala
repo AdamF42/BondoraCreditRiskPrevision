@@ -14,6 +14,7 @@ object Main {
 
   val normalizedDataSetPath: String = "/normalized.csv"
   val originDataSetPath: String = "/LoanData.csv"
+  private val patterns3bucket = "s3://.*"
 
   def main(args: Array[String]): Unit = {
 
@@ -41,16 +42,18 @@ object Main {
     mlpTrainer.saveModel()
     rfTrainer.saveModel()
 
-    S3Load.copyModelToS3("mlp", basePath)
-    S3Load.copyModelToS3("rf", basePath)
+    if(basePath.matches(patterns3bucket)) {
 
-    S3Load.copyModelFromS3("mlp", basePath)
-    S3Load.copyModelFromS3("rf", basePath)
+      S3Load.copyModelToS3("mlp", basePath)
+      S3Load.copyModelToS3("rf", basePath)
+
+      S3Load.copyModelFromS3("mlp", basePath)
+      S3Load.copyModelFromS3("rf", basePath)
+
+    }
 
     mlpTrainer.loadModel()
     rfTrainer.loadModel()
-
-    println("EVALUATING TRAINING OF MODELS")
 
     val mlpResult = mlpTrainer.evaluate(test)
     val rfResult = rfTrainer.evaluate(test)
@@ -86,7 +89,7 @@ object Main {
     val session = SparkSession
       .builder
       .appName("BondoraCreditRiskPrevision")
-//      .master("local[*]")
+      .master("local[*]")
       .getOrCreate()
     setupLogging()
     session
