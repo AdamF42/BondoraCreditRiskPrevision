@@ -3,7 +3,6 @@ package it.unibo.classifier
 import ml.combust.bundle.BundleFile
 import ml.combust.bundle.serializer.SerializationFormat
 import ml.combust.mleap.spark.SparkSupport._
-import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.ml.bundle.SparkBundleContext
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
 import org.apache.spark.ml.{Pipeline, PipelineStage, Transformer}
@@ -12,7 +11,7 @@ import resource.managed
 
 trait BaseClassifier {
 
-  private val baseDir: String = System.getProperty("user.dir") + "/models"
+  private val baseDir: String = s"${System.getProperty("user.dir")}/models"
   private val modelName: String = getSavedModelName
   private val trainer: PipelineStage = createTrainer()
   private val predictionToLabel: Map[Double, String] = collection.immutable.HashMap(
@@ -65,8 +64,6 @@ trait BaseClassifier {
 
   def saveModel()(implicit spark: SparkSession): Unit = {
 
-    setupDirectory(spark)
-
     val train = trainDataFrame.getOrElse(throw new ClassNotFoundException)
     val model = pipelineModel.getOrElse(throw new ClassNotFoundException)
 
@@ -76,21 +73,12 @@ trait BaseClassifier {
       model.writeBundle.format(SerializationFormat.Json).save(bundle)(contextBundle)
         .getOrElse(throw new NoSuchElementException)
     }
+
   }
 
-  private def setupDirectory(implicit spark: SparkSession): Unit = {
-    val fs: FileSystem = FileSystem.get(spark.sparkContext.hadoopConfiguration)
-    val outPutPath = new Path(baseDir)
-    val filePath = new Path(baseDir + modelName)
-
-    if (fs.exists(filePath))
-      fs.delete(filePath, false)
-
-    if (!fs.exists(outPutPath))
-      fs.mkdirs(outPutPath)
-  }
 
   def loadModel(): Transformer = {
+
     val uriPath = "jar:file:" + baseDir + modelName
     val model = (for (bundle <- managed(BundleFile(uriPath))) yield {
       bundle.loadSparkBundle().getOrElse(throw new NoSuchElementException)
