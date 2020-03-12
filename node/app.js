@@ -242,10 +242,10 @@ var test = `{
 }`
 
 app.get("/api/v1/publicdataset", (req, res, next) => {
-    console.log("request: /api/v1/publicdataset/request.loanDateFrom="+req.param("request.loanDateFrom"));
+    console.log("request: /api/v1/publicdataset/request.loanDateFrom=" + req.param("request.loanDateFrom"));
     res.json(JSON.parse(test));
 });
 
 app.listen(8000, () => {
- console.log("Service running at http://localhost:8000/api/v1/publicdataset");
+    console.log("Service running at http://localhost:8000/api/v1/publicdataset");
 });

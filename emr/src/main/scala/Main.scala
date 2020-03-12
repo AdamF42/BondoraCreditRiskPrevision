@@ -14,7 +14,6 @@ object Main {
 
   val normalizedDataSetPath: String = "/normalized.csv"
   val originDataSetPath: String = "/LoanData.csv"
-  private val patterns3bucket = "s3://.*"
 
   def main(args: Array[String]): Unit = {
 
@@ -28,39 +27,24 @@ object Main {
     val train: Dataset[Row] = splits(0)
     val test = splits(1)
 
-    val mlpTrainer = ClassifierFactory(MLP)
-    val rfTrainer = ClassifierFactory(RF)
+    val trainers = Seq(ClassifierFactory(MLP), ClassifierFactory(RF))
 
     val normalizer = NormalizerFactory().getNormalizer(normalized.columns)
     val assembler = AssemblerFactory().getAssembler(normalized.columns)
 
-    mlpTrainer.train(train, Array(assembler, normalizer))
-    rfTrainer.train(train, Array(assembler, normalizer))
+    trainers.foreach(t => t.train(train, Array(assembler, normalizer)))
 
     S3Load.createModelFolder()
 
-    mlpTrainer.saveModel()
-    rfTrainer.saveModel()
+    trainers.foreach(t => t.saveModel())
 
-    if (basePath.matches(patterns3bucket)) {
-
-      S3Load.copyModelToS3("mlp", basePath)
-      S3Load.copyModelToS3("rf", basePath)
-
-      S3Load.copyModelFromS3("mlp", basePath)
-      S3Load.copyModelFromS3("rf", basePath)
-
+    if (S3Load.isS3Folder(basePath)) {
+      Seq("mlp", "rf").foreach(p => S3Load.copyModelToS3(p, basePath))
     }
 
-    mlpTrainer.loadModel()
-    rfTrainer.loadModel()
+    trainers.foreach(t => t.loadModel())
 
-    val mlpResult = mlpTrainer.evaluate(test)
-    val rfResult = rfTrainer.evaluate(test)
-
-    println("MLP : " + mlpResult)
-    println("RF  : " + rfResult)
-
+    trainers.foreach(t => println(s"${t.getClass}: ${t.evaluate(test)}"))
   }
 
   private def getNormalizedDataFrame(root: String)(implicit sparkConfiguration: Configuration): DataFrame = {

@@ -5,8 +5,9 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
+import it.unibo.S3Load
+import it.unibo.classifier.ClassifierFactory
 import it.unibo.classifier.ClassifierFactory.{MLP, RF}
-import it.unibo.classifier.{BaseClassifier, ClassifierFactory}
 import it.unibo.client.Client
 import it.unibo.converter.PublicDatasetPayloadConverter
 import it.unibo.datapreprocessor.DataPreprocessorFactory
@@ -16,10 +17,9 @@ import it.unibo.sparksession.SparkConfiguration
 import scala.concurrent.Future
 
 
-class Server(client: Client)(implicit sparkConfiguration: SparkConfiguration) {
+class Server(client: Client, basePath: String)(implicit sparkConfiguration: SparkConfiguration) {
 
-  private val mlpTrainer: BaseClassifier = ClassifierFactory(MLP)
-  private val rfTrainer: BaseClassifier = ClassifierFactory(RF)
+  val trainers = Seq(ClassifierFactory(MLP), ClassifierFactory(RF))
 
   implicit val actorSystem: ActorSystem = ActorSystem("sttp-pres")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
@@ -35,19 +35,21 @@ class Server(client: Client)(implicit sparkConfiguration: SparkConfiguration) {
 
   def start: Future[Unit] = {
     sparkConfiguration.getOrCreateSession
-    Http().bindAndHandle(serverRoutes, "0.0.0.0", 9000).map(_ => println("Started"))
+    Http().bindAndHandle(serverRoutes, "0.0.0.0", 80).map(_ => println("Started"))
   }
 
   private def responseToString(): String = {
-    mlpTrainer.loadModel()
-    rfTrainer.loadModel()
+
+    if (S3Load.isS3Folder(basePath))
+      Seq("mlp", "rf").foreach(p => S3Load.copyModelFromS3(p, basePath))
+
+    trainers.foreach(t => t.loadModel())
     val publicDataset = client.getPublicDataset
     val dataFrameToClassify = PublicDatasetPayloadConverter.publicDStoDF(publicDataset.Payload)
     val normalized = DataPreprocessorFactory().normalizeToClassify(dataFrameToClassify)
-    val mlpResult: Seq[(String, String)] = mlpTrainer.classify(normalized)
-    val rfResult: Seq[(String, String)] = rfTrainer.classify(normalized)
+    val results = trainers.map(t => t.classify(normalized))
 
-    val response = Response(composeUsers(mlpResult ++ rfResult),
+    val response = Response(composeUsers(results.head ++ results(1)),
       success = publicDataset.Success.getOrElse(false),
       errors = publicDataset.Error.getOrElse(""))
 
