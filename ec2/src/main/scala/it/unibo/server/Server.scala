@@ -14,7 +14,7 @@ import it.unibo.datapreprocessor.DataPreprocessorFactory
 import it.unibo.server.model.{Response, User}
 import it.unibo.sparksession.SparkConfiguration
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 
 class Server(client: Client, basePath: String)(implicit sparkConfiguration: SparkConfiguration) {
@@ -23,8 +23,7 @@ class Server(client: Client, basePath: String)(implicit sparkConfiguration: Spar
 
   implicit val actorSystem: ActorSystem = ActorSystem("sttp-pres")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
-
-  import actorSystem.dispatcher
+  implicit val dispatcher: ExecutionContextExecutor = actorSystem.dispatcher
 
   private val serverRoutes: Route =
     pathPrefix("data") {
@@ -47,9 +46,9 @@ class Server(client: Client, basePath: String)(implicit sparkConfiguration: Spar
     val publicDataset = client.getPublicDataset
     val dataFrameToClassify = PublicDatasetPayloadConverter.publicDStoDF(publicDataset.Payload)
     val normalized = DataPreprocessorFactory().normalizeToClassify(dataFrameToClassify)
-    val results = trainers.map(t => t.classify(normalized))
+    val results: Seq[(String, String)] = trainers.flatMap(t => t.classify(normalized))
 
-    val response = Response(composeUsers(results.head ++ results(1)),
+    val response = Response(composeUsers(results),
       success = publicDataset.Success.getOrElse(false),
       errors = publicDataset.Error.getOrElse(""))
 
@@ -57,7 +56,13 @@ class Server(client: Client, basePath: String)(implicit sparkConfiguration: Spar
   }
 
   private def composeUsers(classifications: Seq[(String, String)]): Seq[User] = {
-    val groupedUsers: Map[String, List[(String, String)]] = classifications.toList.groupBy(_._1)
-    groupedUsers.map(c => User(c._1, c._2.head._2, c._2(1)._2)).toList
+    val groupedUsers: Map[String, List[(String, String)]] = classifications.toList groupBy {
+      case (userid, _) => userid
+    }
+    val users = groupedUsers map { case (userId, list) =>
+      val result = list map { case (_, rating) => rating }
+      User(userId, result.headOption.getOrElse(""), result(1))
+    }
+    users.toList
   }
 }

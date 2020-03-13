@@ -10,6 +10,7 @@ class SparkConfiguration extends Configuration {
     val session = SparkSession
       .builder
       .appName("BondoraCreditRiskPrevision")
+      .master("local[*]")
       .getOrCreate()
     setupLogging()
     session

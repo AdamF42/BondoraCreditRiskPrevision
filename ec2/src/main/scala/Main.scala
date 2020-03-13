@@ -1,3 +1,4 @@
+import it.unibo.client.environment.EnvironmentFactory.bondoraLocal
 import it.unibo.client.environment.{Environment, EnvironmentFactory}
 import it.unibo.client.{Client, ClientFactory}
 import it.unibo.server.Server
@@ -10,7 +11,7 @@ object Main {
 
     val basePath: String = args.headOption getOrElse ".."
 
-    val env: Environment = EnvironmentFactory(EnvironmentFactory.BONDORA_LOCAL)
+    val env: Environment = EnvironmentFactory(bondoraLocal)
     val client: Client = ClientFactory(env)
 
     implicit val sparkConfiguration: SparkConfiguration = new SparkConfiguration()
