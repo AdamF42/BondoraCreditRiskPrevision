@@ -1,10 +1,10 @@
 package it.unibo.datapreprocessor
 
-import org.apache.spark.sql.SparkSession
+import it.unibo.sparksession.Configuration
 
 object DataPreprocessorFactory {
 
-  def apply(session: SparkSession): BaseDataPreprocessor =
-    new DataPreprocessor(session)
+  def apply()(implicit sparkConfiguration: Configuration): BaseDataPreprocessor =
+    new DataPreprocessor(sparkConfiguration.getOrCreateSession)
 
 }

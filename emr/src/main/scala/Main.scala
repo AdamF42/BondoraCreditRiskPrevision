@@ -6,19 +6,18 @@ import it.unibo.classifier.ClassifierFactory
 import it.unibo.classifier.ClassifierFactory.{MLP, RF}
 import it.unibo.datapreprocessor.DataPreprocessorFactory
 import it.unibo.normalizer.NormalizerFactory
+import it.unibo.sparksession.{Configuration, SparkConfiguration}
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, Row}
 
 object Main {
 
   val normalizedDataSetPath: String = "/normalized.csv"
   val originDataSetPath: String = "/LoanData.csv"
-  private val patterns3bucket = "s3://.*"
 
   def main(args: Array[String]): Unit = {
 
-    implicit val spark: SparkSession = setupSparkSession
+    implicit val sparkConfiguration: SparkConfiguration = new SparkConfiguration()
 
     val basePath: String = args.headOption getOrElse ".."
 
@@ -28,76 +27,45 @@ object Main {
     val train: Dataset[Row] = splits(0)
     val test = splits(1)
 
-    val mlpTrainer = ClassifierFactory(MLP)
-    val rfTrainer = ClassifierFactory(RF)
+    val trainers = Seq(ClassifierFactory(MLP), ClassifierFactory(RF))
 
     val normalizer = NormalizerFactory().getNormalizer(normalized.columns)
     val assembler = AssemblerFactory().getAssembler(normalized.columns)
 
-    mlpTrainer.train(train, Array(assembler, normalizer))
-    rfTrainer.train(train, Array(assembler, normalizer))
+    trainers.foreach(t => t.train(train, Array(assembler, normalizer)))
 
     S3Load.createModelFolder()
 
-    mlpTrainer.saveModel()
-    rfTrainer.saveModel()
+    trainers.foreach(t => t.saveModel())
 
-    if(basePath.matches(patterns3bucket)) {
-
-      S3Load.copyModelToS3("mlp", basePath)
-      S3Load.copyModelToS3("rf", basePath)
-
-      S3Load.copyModelFromS3("mlp", basePath)
-      S3Load.copyModelFromS3("rf", basePath)
-
+    if (S3Load.isS3Folder(basePath)) {
+      Seq("mlp", "rf").foreach(p => S3Load.copyModelToS3(p, basePath))
     }
 
-    mlpTrainer.loadModel()
-    rfTrainer.loadModel()
+    trainers.foreach(t => t.loadModel())
 
-    val mlpResult = mlpTrainer.evaluate(test)
-    val rfResult = rfTrainer.evaluate(test)
-
-    println("MLP : " + mlpResult)
-    println("RF  : " + rfResult)
-
+    trainers.foreach(t => println(s"${t.getClass}: ${t.evaluate(test)}"))
   }
 
-  private def getNormalizedDataFrame(root: String)(implicit spark: SparkSession): DataFrame = {
-    val conf = spark.sparkContext.hadoopConfiguration
+  private def getNormalizedDataFrame(root: String)(implicit sparkConfiguration: Configuration): DataFrame = {
+    val conf = sparkConfiguration.getOrCreateSession.sparkContext.hadoopConfiguration
     val fs = FileSystem.get(URI.create(root), conf)
     if (fs.exists(new Path(root + normalizedDataSetPath))) retrieveNormalizedDataFrame(root)
     else getDataFrame(root)
   }
 
-  private def retrieveNormalizedDataFrame(root: String)(implicit spark: SparkSession): DataFrame =
-    spark.read.format("csv")
+  private def retrieveNormalizedDataFrame(root: String)(implicit sparkConfiguration: Configuration): DataFrame =
+    sparkConfiguration.getOrCreateSession.read.format("csv")
       .option("header", value = true)
       .option("inferSchema", "true")
       .load(root + normalizedDataSetPath)
 
-  private def getDataFrame(root: String)(implicit spark: SparkSession): DataFrame = {
+  private def getDataFrame(root: String)(implicit sparkConfiguration: Configuration): DataFrame = {
 
-    val preprocessor = DataPreprocessorFactory(spark)
-    val df = preprocessor.readFile(root + originDataSetPath)
+    val preprocessor = DataPreprocessorFactory()
+    val df = preprocessor.readFile("../LoanData.csv")
 
     preprocessor.normalizeToTrain(df)
-  }
-
-  def setupSparkSession: SparkSession = {
-
-    val session = SparkSession
-      .builder
-      .appName("BondoraCreditRiskPrevision")
-      .master("local[*]")
-      .getOrCreate()
-    setupLogging()
-    session
-  }
-
-  def setupLogging(): Unit = {
-    val rootLogger = Logger.getRootLogger
-    rootLogger.setLevel(Level.ERROR)
   }
 
 }

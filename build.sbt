@@ -6,30 +6,20 @@ ThisBuild / version := "0.1"
 
 ThisBuild / scalaVersion := "2.11.12"
 
-lazy val global = (project in file("."))
-  .settings(commonSettings)
-  .disablePlugins(AssemblyPlugin)
-  .aggregate(
-    core,
-    emr,
-    ec2
-  )
-
 lazy val core = (project in file("core"))
   .disablePlugins(AssemblyPlugin)
   .settings(
     name := "core",
     commonSettings,
-    licenses := apacheLicense,
-    libraryDependencies ++= commonDependencies
+    libraryDependencies ++= commonDependencies,
   )
 
 lazy val emr = (project in file("emr"))
   .settings(
     name := "emr",
-    libraryDependencies ++= commonDependencies,
     commonSettings,
-    mainClass in assembly := Some("Main"),
+    libraryDependencies ++= commonDependencies,
+    mainClass in assembly := Some("Main")
   )
   .dependsOn(
     core
@@ -42,8 +32,15 @@ lazy val ec2 = (project in file("ec2"))
     libraryDependencies ++= commonDependencies ++ Seq(
       dependencies.sttpcore,
       dependencies.sttpcirce,
-      dependencies.circegeneric
-    ) ++ testDependencies
+      dependencies.circegeneric,
+      dependencies.akkastream,
+      dependencies.akkaactor,
+      dependencies.akkahttp
+    ) ++ testDependencies,
+    mainClass in assembly := Some("Main")
+  )
+  .dependsOn(
+    core
   )
 
 
@@ -54,6 +51,7 @@ lazy val dependencies =
     val sttpVersion = "2.0.0-M1"
     val mleapVersion = "0.15.0"
     val scalacticVersion = "3.1.0"
+    val akkaVersion = "2.5.29"
 
     val sparkstreaming = "org.apache.spark" %% "spark-streaming" % sparkVersion % "provided"
     val sparkcore = "org.apache.spark" %% "spark-core" % sparkVersion % "provided"
@@ -66,6 +64,10 @@ lazy val dependencies =
     val circegeneric = "io.circe" %% "circe-generic" % circeVersion
     val scalactic = "org.scalactic" %% "scalactic" % scalacticVersion
     val scalatest = "org.scalatest" %% "scalatest" % scalacticVersion % Test
+    val scalamock = "org.scalamock" %% "scalamock" % "4.4.0" % Test
+    val akkastream = "com.typesafe.akka" %% "akka-stream" % akkaVersion
+    val akkaactor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
+    val akkahttp = "com.typesafe.akka" %% "akka-http" % "10.1.11"
   }
 
 lazy val commonDependencies = Seq(
@@ -79,7 +81,8 @@ lazy val commonDependencies = Seq(
 
 lazy val testDependencies = Seq(
   dependencies.scalatest,
-  dependencies.scalactic
+  dependencies.scalactic,
+  dependencies.scalamock
 )
 
 lazy val commonSettings = Seq(

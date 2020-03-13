@@ -2,11 +2,11 @@ language: scala
 jdk: openjdk8
 
 scala:
-   - 2.11.12
+  - 2.11.12
 
 branches:
   only:
-    - master 
-    
+    - master
+
 notifications:
   email: false

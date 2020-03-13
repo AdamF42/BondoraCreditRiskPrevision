@@ -1,18 +1,17 @@
-package it.unibo.model
+package it.unibo.client.model
 
 import io.circe.Json
 import io.circe.parser._
 import it.unibo.client.model
-import it.unibo.client.model.{PublicDataset, PublicDatasetEmpty, PublicDatasetPayload}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 class PublicDatasetTest extends AnyWordSpec with Matchers {
 
-  "PublicDataset" should {
+  "PublicDataset.decoder" should {
     "decode correctly empty payload" in {
       val incomingJson =
-      parse(
+        parse(
           """{
                 "PageSize": 1000,
                 "PageNr": 100,
@@ -35,7 +34,7 @@ class PublicDatasetTest extends AnyWordSpec with Matchers {
     }
   }
 
-  "PublicDataset" should {
+  "PublicDataset.decoder" should {
     "decode correctly full payload" in {
       val incomingJson =
         parse(

@@ -6,7 +6,7 @@ import ml.combust.mleap.spark.SparkSupport._
 import org.apache.spark.ml.bundle.SparkBundleContext
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
 import org.apache.spark.ml.{Pipeline, PipelineStage, Transformer}
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.DataFrame
 import resource.managed
 
 trait BaseClassifier {
@@ -62,7 +62,7 @@ trait BaseClassifier {
     user zip pred
   }
 
-  def saveModel()(implicit spark: SparkSession): Unit = {
+  def saveModel(): Unit = {
 
     val train = trainDataFrame.getOrElse(throw new ClassNotFoundException)
     val model = pipelineModel.getOrElse(throw new ClassNotFoundException)
