@@ -6,12 +6,21 @@ ThisBuild / version := "0.1"
 
 ThisBuild / scalaVersion := "2.11.12"
 
+lazy val global = (project in file("."))
+  .settings(commonSettings)
+  .disablePlugins(AssemblyPlugin)
+  .aggregate(
+    core,
+    emr,
+    ec2
+  )
+
 lazy val core = (project in file("core"))
   .disablePlugins(AssemblyPlugin)
   .settings(
     name := "core",
     commonSettings,
-    libraryDependencies ++= commonDependencies,
+    libraryDependencies ++= commonDependencies
   )
 
 lazy val emr = (project in file("emr"))
