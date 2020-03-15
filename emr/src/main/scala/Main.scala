@@ -63,7 +63,7 @@ object Main {
   private def getDataFrame(root: String)(implicit sparkConfiguration: Configuration): DataFrame = {
 
     val preprocessor = DataPreprocessorFactory()
-    val df = preprocessor.readFile("../LoanData.csv")
+    val df = preprocessor.readFile(root + originDataSetPath)
 
     preprocessor.normalizeToTrain(df)
   }
