@@ -7,6 +7,7 @@ import org.apache.spark.ml.stat.Correlation
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{BooleanType, DataType, DoubleType, StringType}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
+import org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK_SER_2
 
 private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocessor {
 
@@ -42,13 +43,13 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
   }
 
   private def transformValuesToString(df: DataFrame): DataFrame = {
-    val stringDF = df
-      .withColumn("id", monotonically_increasing_id())
-      .drop(Columns.getBoolean: _*)
-
     val dfChangeBoolType: DataFrame = castAllTypedColumnsTo(
       df.select(Columns.getBoolean.head, Columns.getBoolean.tail: _*), BooleanType, StringType)
       .withColumn("id", monotonically_increasing_id())
+
+    val stringDF = df
+      .withColumn("id", monotonically_increasing_id())
+      .drop(Columns.getBoolean: _*)
 
     stringDF.join(dfChangeBoolType, Seq("id")).drop("id")
   }
@@ -68,6 +69,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
       .fit(df)
       .transform(df)
       .drop(Columns.getStrings: _*)
+      .persist(MEMORY_AND_DISK_SER_2)
 
     removeIndexName(dfIndexed)
   }
@@ -96,7 +98,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
       .drop(Columns.getUseless: _*)
   }
 
-  private def getMapColumnsMean(df: DataFrame) = {
+  private def getMapColumnsMean(df: DataFrame): Map[String, Any] = {
 
     val nullValue = countNullValue(df)
       .filter { case (_, nullCount) => nullCount > 0 }
@@ -118,14 +120,13 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
 
   private def transformValuesToDouble(df: DataFrame): DataFrame = {
 
-    val numericalCols: Seq[String] = df.columns.filter(c => !Columns.getStrings.contains(c))
-    val dfNumerical: DataFrame = df.drop(Columns.getStrings: _*)
-
-    val dfChangeNumType: DataFrame = castAllTypedColumnsTo(dfNumerical, StringType, DoubleType)
+    val dfChangeNumType: DataFrame = castAllTypedColumnsTo(
+      df.select(Columns.getDouble.head, Columns.getDouble.tail: _*), StringType, DoubleType)
       .withColumn("id", monotonically_increasing_id())
 
-    val dfLexical: DataFrame = df.drop(numericalCols: _*)
+    val dfLexical: DataFrame = df
       .withColumn("id", monotonically_increasing_id())
+      .drop(Columns.getDouble: _*)
 
     dfChangeNumType.join(dfLexical, Seq("id")).drop("id")
   }
