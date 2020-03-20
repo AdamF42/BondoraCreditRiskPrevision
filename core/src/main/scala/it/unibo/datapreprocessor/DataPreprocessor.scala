@@ -5,7 +5,7 @@ import org.apache.spark.ml.feature.{StringIndexer, VectorAssembler}
 import org.apache.spark.ml.linalg.Matrix
 import org.apache.spark.ml.stat.Correlation
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{BooleanType, DataType, DoubleType, StringType}
+import org.apache.spark.sql.types.{DataType, DoubleType, StringType}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK_SER_2
 
@@ -33,26 +33,10 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
     dfReduced.na.fill(map)
   }
 
-  override def normalizeToClassify(df: DataFrame): DataFrame = {
-
-    val correctTypeDF = transformValuesToString(df)
-
-    indexColumnsValues(correctTypeDF)
+  override def normalizeToClassify(df: DataFrame): DataFrame =
+    indexColumnsValues(df)
       .drop(Columns.getDate: _*)
       .drop(Columns.getUseless.filter(x => !x.contains("UserName")): _*)
-  }
-
-  private def transformValuesToString(df: DataFrame): DataFrame = {
-    val dfChangeBoolType: DataFrame = castAllTypedColumnsTo(
-      df.select(Columns.getBoolean.head, Columns.getBoolean.tail: _*), BooleanType, StringType)
-      .withColumn("id", monotonically_increasing_id())
-
-    val stringDF = df
-      .withColumn("id", monotonically_increasing_id())
-      .drop(Columns.getBoolean: _*)
-
-    stringDF.join(dfChangeBoolType, Seq("id")).drop("id")
-  }
 
   private def castAllTypedColumnsTo(df: DataFrame, sourceType: DataType, targetType: DataType): DataFrame = {
     df.schema.filter(_.dataType == sourceType).foldLeft(df) {
