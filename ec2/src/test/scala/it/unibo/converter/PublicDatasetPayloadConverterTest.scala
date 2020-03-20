@@ -179,13 +179,6 @@ class PublicDatasetPayloadConverterTest extends AnyWordSpec with OneInstancePerT
     }
   }
 
-  "ConvertPublicDatasetPayload" should {
-    "has no columns when payload is null" in {
-      val dfResult: DataFrame = PublicDatasetPayloadConverter.publicDStoDF(Seq.empty)
-      dfResult.columns.toSeq.isEmpty shouldBe true
-    }
-  }
-
   private def castAllTypedColumnsTo(df: DataFrame, targetType: DataType): DataFrame = {
     df.schema.foldLeft(df) {
       case (acc, col) => acc.withColumn(col.name, df(col.name).cast(targetType))
