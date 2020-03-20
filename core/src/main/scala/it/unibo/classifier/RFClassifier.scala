@@ -9,7 +9,7 @@ private class RFClassifier(val rfClassifier: RandomForestClassifier = new Random
     rfClassifier
       .setImpurity("gini")
       .setMaxDepth(3)
-      .setNumTrees(10)
+      .setNumTrees(5)
       .setFeaturesCol("features")
       .setSeed(1234L)
       .setLabelCol("Status")

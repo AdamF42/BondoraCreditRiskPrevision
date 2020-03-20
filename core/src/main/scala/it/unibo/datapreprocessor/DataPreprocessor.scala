@@ -193,7 +193,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
 
   private def filterEndedLoans(df: DataFrame): Dataset[Row] = {
     df.select(df.columns.head, df.columns.tail: _*)
-      .where(df.col("ContractEndDate").lt(lit(current_date())))
+      .where(df.col("Status").isin(List("Late","Repaid"):_*))
   }
 
   private def countNullValue(df: DataFrame): Array[(String, Long)] = {

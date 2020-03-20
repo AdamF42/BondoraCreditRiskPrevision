@@ -8,7 +8,9 @@ object Columns {
     "ActiveScheduleFirstPaymentReached",
     "Rating",
     "Status",
-    "Restructured")
+    "Restructured",
+    "WorseLateCategory"
+  )
 
   def getUseless = Seq("LoanId",
     "UserName",
@@ -80,7 +82,7 @@ object Columns {
     "InterestAndPenaltyBalance",
     "NoOfPreviousLoansBeforeLoan",
     "AmountOfPreviousLoansBeforeLoan",
-    "PreviousRepaymentsBeforeLoan",
+    "PrincipalOverdueBySchedule",
     "PreviousEarlyRepaymentsCountBeforeLoan"
   )
 

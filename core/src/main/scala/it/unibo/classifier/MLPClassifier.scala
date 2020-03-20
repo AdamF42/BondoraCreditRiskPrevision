@@ -7,12 +7,12 @@ private class MLPClassifier(val mlpClassifier: MultilayerPerceptronClassifier = 
 
   override def createTrainer(): MultilayerPerceptronClassifier =
     this.mlpClassifier
-      .setLayers(Array[Int](43, 20, 10, 3))
+      .setLayers(Array[Int](45, 22, 11, 2))
       .setBlockSize(64)
       .setSeed(1234L)
       .setFeaturesCol("norm_features")
       .setLabelCol("Status")
-      .setMaxIter(1)
+      .setMaxIter(10)
 
   override def getSavedModelName: String = "/mlp.zip"
 }
