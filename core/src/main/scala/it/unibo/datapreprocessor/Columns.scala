@@ -2,10 +2,13 @@ package it.unibo.datapreprocessor
 
 object Columns {
 
-  def getStrings = Seq("Country",
+  def getStrings = Seq("NewCreditCustomer",
+    "Country",
     "EmploymentDurationCurrentEmployer",
+    "ActiveScheduleFirstPaymentReached",
     "Rating",
     "Status",
+    "Restructured",
     "WorseLateCategory"
   )
 

@@ -47,18 +47,27 @@ trait BaseClassifier {
     evaluator.evaluate(predictionAndLabels)
   }
 
+  private def countNullValue(df: DataFrame): Array[(String, Long)] = {
+    df.columns
+      .map(x => (x, df.filter(df(x).isNull || df(x) === "" || df(x).isNaN).count))
+  }
+
   def classify(df: DataFrame): List[(String, String)] = {
-
+    println("Sono in classify")
     val model: Transformer = pipelineModel.getOrElse(throw new ClassNotFoundException)
-
+    println("Ho preso il modello")
     val classified: DataFrame = model.transform(df).select("prediction", "Status")
-
+    println("Ho classificato")
+    classified.printSchema()
+    classified.show()
+    val nulli = countNullValue(classified)
+    nulli.foreach(println)
     val pred = classified.select("prediction").collect
       .map(x => predictionToLabel(x.getAs[Double]("prediction"))).toList
-
+    println("Faccio la prediction")
     val user = df.select("UserName").collect
       .map(each => each.getAs[String]("UserName")).toList
-
+    println("Prendo la colonna utente e ho finito")
     user zip pred
   }
 
