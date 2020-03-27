@@ -5,12 +5,12 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
-import it.unibo.S3Load
 import it.unibo.classifier.ClassifierFactory
 import it.unibo.classifier.ClassifierFactory.{MLP, RF}
 import it.unibo.client.Client
 import it.unibo.converter.PublicDatasetPayloadConverter
 import it.unibo.datapreprocessor.DataPreprocessorFactory
+import it.unibo.filesys.FileHandlerFactory
 import it.unibo.server.model.{Response, User}
 import it.unibo.sparksession.SparkConfiguration
 
@@ -39,8 +39,14 @@ class Server(client: Client, basePath: String)(implicit sparkConfiguration: Spar
 
   private def responseToString(): String = {
 
-    if (S3Load.isS3Folder(basePath))
-      Seq("mlp", "rf").foreach(p => S3Load.copyModelFromS3(p, basePath))
+
+    val modelFileHandler = FileHandlerFactory(FileHandlerFactory.model)
+    val dfFileHandler = FileHandlerFactory(FileHandlerFactory.df)
+
+    if (modelFileHandler.isS3Folder(basePath)) {
+      Seq("mlp", "rf").foreach(p => modelFileHandler.copyFromS3(p, basePath))
+      dfFileHandler.copyFromS3("mean", basePath)
+    }
 
     trainers.foreach(t => t.loadModel())
     val publicDataset = client.getPublicDataset

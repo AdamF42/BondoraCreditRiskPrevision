@@ -4,12 +4,13 @@ import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.feature.{StringIndexer, VectorAssembler}
 import org.apache.spark.ml.linalg.Matrix
 import org.apache.spark.ml.stat.Correlation
+import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{BooleanType, DataType, DoubleType, StringType}
-import org.apache.spark.sql._
 import org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK_SER_2
 
 private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocessor {
+
 
   def readFile(filePath: String): DataFrame =
     session.read.format("csv")
@@ -50,24 +51,11 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
     indexedDF.na.fill(meanMap)
   }
 
-  private def saveDataframe(df: DataFrame): Unit =
-    df.coalesce(1)
-      .write
-      .mode(SaveMode.Overwrite)
-      .format("com.databricks.spark.csv")
-      .option("header", "true")
-      .save("meanDF")
-
   private def loadDataframe(): DataFrame =
     session.read.format("csv")
       .option("header", value = true)
-      .load("meanDF")
-
-  private def castAllTypedColumnsTo(df: DataFrame, sourceType: DataType, targetType: DataType): DataFrame = {
-    df.schema.filter(_.dataType == sourceType).foldLeft(df) {
-      case (acc, col) => acc.withColumn(col.name, df(col.name).cast(targetType))
-    }
-  }
+      .option("compression", "gzip")
+      .load("mean")
 
   private def indexColumnsValues(df: DataFrame): DataFrame = {
 
@@ -97,6 +85,25 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
           .replace("Index", ""))
       }
 
+  private def dfToMap(df: DataFrame): Map[String, Any] =
+    df.collect.map(r => Map(df.columns.zip(r.toSeq): _*))
+      .headOption.getOrElse(Map.empty[String, Double])
+
+  private def saveDataframe(df: DataFrame): Unit =
+    df.coalesce(1)
+      .write
+      .mode(SaveMode.Overwrite)
+      .format("com.databricks.spark.csv")
+      .option("header", "true")
+      .option("compression", "gzip")
+      .save("mean")
+
+  private def castAllTypedColumnsTo(df: DataFrame, sourceType: DataType, targetType: DataType): DataFrame = {
+    df.schema.filter(_.dataType == sourceType).foldLeft(df) {
+      case (acc, col) => acc.withColumn(col.name, df(col.name).cast(targetType))
+    }
+  }
+
   private def removeUselessColumns(df: Dataset[Row]): DataFrame = {
 
     val colsDrop: Array[String] = getColumnsWithNullValues(df)
@@ -117,14 +124,10 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
           .replace(")", ""))
       }
 
-    saveDataframe(mediaRenamed)   // nomeColonna    nomeColonna
-                                  //    media          media
+    saveDataframe(mediaRenamed) // nomeColonna    nomeColonna
+    //    media          media
     dfToMap(mediaRenamed)
   }
-
-  private def dfToMap(df: DataFrame): Map[String, Any] =
-    df.collect.map(r => Map(df.columns.zip(r.toSeq): _*))
-      .headOption.getOrElse(Map.empty[String, Double])
 
   private def transformValuesToDouble(df: DataFrame): DataFrame = {
 
@@ -201,7 +204,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
 
   private def filterEndedLoans(df: DataFrame): Dataset[Row] =
     df.select(df.columns.head, df.columns.tail: _*)
-      .where(df.col("Status").isin(List("Late","Repaid"):_*))
+      .where(df.col("Status").isin(List("Late", "Repaid"): _*))
 
   private def countNullValue(df: DataFrame): Array[(String, Long)] = {
     df.columns
