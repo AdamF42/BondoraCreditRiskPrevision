@@ -6,7 +6,7 @@ import org.apache.spark.ml.linalg.Matrix
 import org.apache.spark.ml.stat.Correlation
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{BooleanType, DataType, DoubleType, StringType}
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
+import org.apache.spark.sql._
 import org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK_SER_2
 
 private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocessor {
@@ -30,99 +30,38 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
 
     val meanMap: Map[String, Any] = getMapColumnsMean(dfReduced)
 
-    meanMap.foreach(x => println(s"${x._1} -> ${x._2}"))
-
-    saveDataframe(meanMap)
-
-    val ciccia = loadDataframe()
-    ciccia.show()
-
     dfReduced.na.fill(meanMap)
   }
 
-  private def saveDataframe(ciccio: Map[String, Any]): Unit = {
-    import session.implicits._
-    // session.sparkContext.parallelize(map.toSeq).saveAsTextFile("token_freq")
-    // session.sparkContext.parallelize(map.toSeq).saveAsObjectFile("meanMap")
-    session.sparkContext.parallelize(ciccio.toSeq).coalesce(1).toDF()
-      .write
-      .option("header", "true")
-      .csv("meanMap")
-  }
-
-  private def loadDataframe(): DataFrame = {
-//    type MeanMap = (String, Any)
-//    val boh = session.sparkContext.objectFile[MeanMap]("meanMap").collectAsMap()
-//    boh
-    session.read.format("csv")
-      .option("header", value = true)
-      .load("meanMap.csv")
-  }
-
   override def normalizeToClassify(df: DataFrame): DataFrame = {
-
-    println("sono in normalizeToClassify")
     val correctTypeDF =
       df.schema.filter(_.dataType == BooleanType).foldLeft(df) {
         case (acc, col) => acc.withColumn(col.name, df(col.name).cast(StringType))
       }
 
-    val banano = indexColumnsValues(correctTypeDF)
+    val indexedDF = indexColumnsValues(correctTypeDF)
       .drop(Columns.getDate: _*)
       .drop(Columns.getUseless.filter(x => !x.contains("UserName")): _*)
 
-    val adam = loadDataframe() // Map [String, Any]
+    val dfWithMean: DataFrame = loadDataframe() // nome colonna - media
 
-    banano.na
+    val meanMap = dfToMap(dfWithMean)
 
-    val valoriNulli = countNullValue(banano)
-    valoriNulli.foreach(println)
-
-    println(banano.columns.length)
-
-    banano.show()
-
-    banano
-
+    indexedDF.na.fill(meanMap)
   }
 
+  private def saveDataframe(df: DataFrame): Unit =
+    df.coalesce(1)
+      .write
+      .mode(SaveMode.Overwrite)
+      .format("com.databricks.spark.csv")
+      .option("header", "true")
+      .save("meanDF")
 
-
-//    val correctTypeDF = transformValuesToString(df)
-//
-//    indexColumnsValues(correctTypeDF)
-//      .drop(Columns.getDate: _*)
-//      .drop(Columns.getUseless.filter(x => !x.contains("UserName")): _*)
-//  }
-//
-//  private def transformValuesToString(df: DataFrame): DataFrame = {
-//    val dfChangeBoolType: DataFrame = castAllTypedColumnsTo(
-//      df.select(Columns.getBoolean.head, Columns.getBoolean.tail: _*), BooleanType, StringType)
-//      .withColumn("id", monotonically_increasing_id())
-//
-//    val stringDF = df
-//      .withColumn("id", monotonically_increasing_id())
-//      .drop(Columns.getBoolean: _*)
-//
-//    stringDF.join(dfChangeBoolType, Seq("id")).drop("id")
-//  }
-
-
-//    val df2 = df
-//      .withColumn("ActiveScheduleFirstPaymentReached", col("ActiveScheduleFirstPaymentReached").cast(StringType))
-//      .withColumn("NewCreditCustomer", col("NewCreditCustomer").cast(StringType))
-//      .withColumn("Restructured", col("Restructured").cast(StringType))
-//      .withColumn("LoanCancelled", col("LoanCancelled").cast(StringType))
-//ColumnsValues(df2)
-  ////      .drop(Columns.getDate: _*)
-  ////      .drop(Columns.getUseless.filter(x => !x.contains("UserName")): _*)
-  ////
-  ////    countNullValue(banano).foreach(println)
-  ////
-  ////    banano
-//    val banano = index
-
-
+  private def loadDataframe(): DataFrame =
+    session.read.format("csv")
+      .option("header", value = true)
+      .load("meanDF")
 
   private def castAllTypedColumnsTo(df: DataFrame, sourceType: DataType, targetType: DataType): DataFrame = {
     df.schema.filter(_.dataType == sourceType).foldLeft(df) {
@@ -151,13 +90,12 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
       new StringIndexer().setInputCol(colName).setOutputCol(colName + "Index").setHandleInvalid("skip")
     }
 
-  private def removeIndexName(df: DataFrame): DataFrame = {
+  private def removeIndexName(df: DataFrame): DataFrame =
     df.columns
       .foldLeft(df) { (newdf, colname) =>
         newdf.withColumnRenamed(colname, colname
           .replace("Index", ""))
       }
-  }
 
   private def removeUselessColumns(df: Dataset[Row]): DataFrame = {
 
@@ -170,23 +108,23 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
 
   private def getMapColumnsMean(df: DataFrame): Map[String, Any] = {
 
-//    val nullValue = countNullValue(df)
-//      .filter { case (_, nullCount) => nullCount > 0 }
-//      .map { case (columnName, _) => columnName }
+    val media: DataFrame = df.agg(df.columns.map(c => c -> "avg").toMap)
 
-    val media = df.select(df.columns.toSeq.map(mean): _*)
-
-    val mediaRenamed = media.columns
+    val mediaRenamed: DataFrame = media.columns
       .foldLeft(media) { (dfTmp, colName) =>
         dfTmp.withColumnRenamed(colName, colName
           .replace("avg(", "")
           .replace(")", ""))
       }
 
-    mediaRenamed
-      .collect.map(r => Map(mediaRenamed.columns.zip(r.toSeq): _*))
-      .headOption.getOrElse(Map.empty[String, Any])
+    saveDataframe(mediaRenamed)   // nomeColonna    nomeColonna
+                                  //    media          media
+    dfToMap(mediaRenamed)
   }
+
+  private def dfToMap(df: DataFrame): Map[String, Any] =
+    df.collect.map(r => Map(df.columns.zip(r.toSeq): _*))
+      .headOption.getOrElse(Map.empty[String, Double])
 
   private def transformValuesToDouble(df: DataFrame): DataFrame = {
 
@@ -261,10 +199,9 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
     correlationMatrix.getAs(0)
   }
 
-  private def filterEndedLoans(df: DataFrame): Dataset[Row] = {
+  private def filterEndedLoans(df: DataFrame): Dataset[Row] =
     df.select(df.columns.head, df.columns.tail: _*)
       .where(df.col("Status").isin(List("Late","Repaid"):_*))
-  }
 
   private def countNullValue(df: DataFrame): Array[(String, Long)] = {
     df.columns
