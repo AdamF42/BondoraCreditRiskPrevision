@@ -10,3 +10,5 @@ node/node_modules/
 models/
 
 .models.crc
+
+mean/

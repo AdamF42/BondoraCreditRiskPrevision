@@ -1,10 +1,10 @@
 import java.net.URI
 
-import it.unibo.S3Load
 import it.unibo.assembler.AssemblerFactory
 import it.unibo.classifier.ClassifierFactory
 import it.unibo.classifier.ClassifierFactory.{MLP, RF}
 import it.unibo.datapreprocessor.DataPreprocessorFactory
+import it.unibo.filesys.FileHandlerFactory
 import it.unibo.normalizer.NormalizerFactory
 import it.unibo.sparksession.{Configuration, SparkConfiguration}
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -14,6 +14,7 @@ object Main {
 
   val normalizedDataSetPath: String = "/normalized.csv"
   val originDataSetPath: String = "/LoanData.csv"
+  val meanFolder: String = "mean"
 
   def main(args: Array[String]): Unit = {
 
@@ -34,15 +35,17 @@ object Main {
 
     trainers.foreach(t => t.train(train, Array(assembler, normalizer)))
 
-    S3Load.createModelFolder()
+    val modelFileHandler = FileHandlerFactory(FileHandlerFactory.model)
+    val dfFileHandler = FileHandlerFactory(FileHandlerFactory.df)
+
+    modelFileHandler.createModelFolder()
 
     trainers.foreach(t => t.saveModel())
 
-    if (S3Load.isS3Folder(basePath)) {
-      Seq("mlp", "rf").foreach(p => S3Load.copyModelToS3(p, basePath))
+    if (modelFileHandler.isS3Folder(basePath)) {
+      Seq("mlp", "rf").foreach(p => modelFileHandler.copyToS3(p, basePath))
+      dfFileHandler.copyToS3(meanFolder, basePath)
     }
-
-    trainers.foreach(t => t.loadModel())
 
     trainers.foreach(t => println(s"${t.getClass}: ${t.evaluate(test)}"))
   }

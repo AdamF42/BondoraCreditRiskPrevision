@@ -73,9 +73,7 @@ trait BaseClassifier {
       model.writeBundle.format(SerializationFormat.Json).save(bundle)(contextBundle)
         .getOrElse(throw new NoSuchElementException)
     }
-
   }
-
 
   def loadModel(): Transformer = {
 
