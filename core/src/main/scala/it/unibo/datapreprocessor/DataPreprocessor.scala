@@ -54,8 +54,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
   private def loadDataframe(): DataFrame =
     session.read.format("csv")
       .option("header", value = true)
-      .option("compression", "gzip")
-      .load("mean")
+      .load("file:mean")
 
   private def indexColumnsValues(df: DataFrame): DataFrame = {
 
@@ -90,12 +89,10 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
       .headOption.getOrElse(Map.empty[String, Double])
 
   private def saveDataframe(df: DataFrame): Unit =
-    df.coalesce(1)
-      .write
+    df.write
       .mode(SaveMode.Overwrite)
       .format("com.databricks.spark.csv")
       .option("header", "true")
-      .option("compression", "gzip")
       .save("mean")
 
   private def castAllTypedColumnsTo(df: DataFrame, sourceType: DataType, targetType: DataType): DataFrame = {
