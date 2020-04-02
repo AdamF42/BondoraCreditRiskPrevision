@@ -13,7 +13,6 @@ import it.unibo.datapreprocessor.DataPreprocessorFactory
 import it.unibo.filesys.FileHandlerFactory
 import it.unibo.server.model.{Response, User}
 import it.unibo.sparksession.SparkConfiguration
-import it.unibo.filesys.BaseFileHandler
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
 
@@ -50,12 +49,10 @@ class Server(client: Client, basePath: String)(implicit sparkConfiguration: Spar
       dfFileHandler.copyFromS3("mean", basePath)
     }
 
-    val meanPath = if (modelFileHandler.isS3Folder(basePath)) "file:mean" else "./mean"
-
     trainers.foreach(t => t.loadModel())
     val publicDataset = client.getPublicDataset
     val dataFrameToClassify = PublicDatasetPayloadConverter.publicDStoDF(publicDataset.Payload)
-    val normalized = DataPreprocessorFactory().normalizeToClassify(dataFrameToClassify, meanPath)
+    val normalized = DataPreprocessorFactory().normalizeToClassify(dataFrameToClassify)
     val results: Seq[(String, String)] = trainers.flatMap(t => t.classify(normalized))
 
     val response = Response(composeUsers(results),

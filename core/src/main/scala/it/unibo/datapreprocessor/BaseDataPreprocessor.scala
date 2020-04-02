@@ -8,6 +8,6 @@ trait BaseDataPreprocessor {
 
   def normalizeToTrain(df: DataFrame): DataFrame
 
-  def normalizeToClassify(df: DataFrame, meanPath: String): DataFrame
+  def normalizeToClassify(df: DataFrame): DataFrame
 
 }

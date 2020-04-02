@@ -34,7 +34,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
     dfReduced.na.fill(meanMap)
   }
 
-  override def normalizeToClassify(df: DataFrame, meanPath: String): DataFrame = {
+  override def normalizeToClassify(df: DataFrame): DataFrame = {
     val correctTypeDF =
       df.schema.filter(_.dataType == BooleanType).foldLeft(df) {
         case (acc, col) => acc.withColumn(col.name, df(col.name).cast(StringType))
@@ -44,17 +44,17 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
       .drop(Columns.getDate: _*)
       .drop(Columns.getUseless.filter(x => !x.contains("UserName")): _*)
 
-    val dfWithMean: DataFrame = loadDataframe(meanPath) // nome colonna - media
+    val dfWithMean: DataFrame = loadDataframe() // nome colonna - media
 
     val meanMap = dfToMap(dfWithMean)
 
     indexedDF.na.fill(meanMap)
   }
 
-  private def loadDataframe(meanPath: String): DataFrame =
+  private def loadDataframe(): DataFrame =
     session.read.format("csv")
       .option("header", value = true)
-      .load(meanPath)
+      .load("./mean")
 
   private def indexColumnsValues(df: DataFrame): DataFrame = {
 
