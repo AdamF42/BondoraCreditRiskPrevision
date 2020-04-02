@@ -20,7 +20,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
 
   override def normalizeToTrain(df: DataFrame): DataFrame = {
     println("################# filterEndedLoans #################")
-    val dfEndedLoans = Primitives.time(filterEndedLoans(df))
+    val dfEndedLoans = Primitives.time(filterCurrentStatus(df))
 
     println("################# removeUselessColumns #################")
     val dfWithoutUselessCols: DataFrame = Primitives.time(removeUselessColumns(dfEndedLoans))
@@ -51,7 +51,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
       .drop(Columns.getDate: _*)
       .drop(Columns.getUseless.filter(x => !x.contains("UserName")): _*)
 
-    val dfWithMean: DataFrame = loadDataframe() // nome colonna - media
+    val dfWithMean: DataFrame = loadDataframe()
 
     val meanMap = dfToMap(dfWithMean)
 
@@ -102,11 +102,10 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
       .option("header", "true")
       .save("mean")
 
-  private def castAllTypedColumnsTo(df: DataFrame, sourceType: DataType, targetType: DataType): DataFrame = {
+  private def castAllTypedColumnsTo(df: DataFrame, sourceType: DataType, targetType: DataType): DataFrame =
     df.schema.filter(_.dataType == sourceType).foldLeft(df) {
       case (acc, col) => acc.withColumn(col.name, df(col.name).cast(targetType))
     }
-  }
 
   private def removeUselessColumns(df: Dataset[Row]): DataFrame = {
 
@@ -129,7 +128,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
       }
 
     saveDataframe(mediaRenamed) // nomeColonna    nomeColonna
-    //    media          media
+                                //    media          media
     dfToMap(mediaRenamed)
   }
 
@@ -206,7 +205,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
     correlationMatrix.getAs(0)
   }
 
-  private def filterEndedLoans(df: DataFrame): Dataset[Row] =
+  private def filterCurrentStatus(df: DataFrame): Dataset[Row] =
     df.select(df.columns.head, df.columns.tail: _*)
       .where(df.col("Status").isin(List("Late", "Repaid"): _*))
 
