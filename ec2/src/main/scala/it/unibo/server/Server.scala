@@ -13,7 +13,7 @@ import it.unibo.datapreprocessor.DataPreprocessorFactory
 import it.unibo.filesys.FileHandlerFactory
 import it.unibo.server.model.{Response, User}
 import it.unibo.sparksession.SparkConfiguration
-
+import it.unibo.filesys.BaseFileHandler
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
 
@@ -33,8 +33,10 @@ class Server(client: Client, basePath: String)(implicit sparkConfiguration: Spar
     }
 
   def start: Future[Unit] = {
+    val modelFileHandler = FileHandlerFactory(FileHandlerFactory.model)
+    val port = if (modelFileHandler.isS3Folder(basePath)) 80 else 9000
     sparkConfiguration.getOrCreateSession
-    Http().bindAndHandle(serverRoutes, "0.0.0.0", 80).map(_ => println("Started"))
+    Http().bindAndHandle(serverRoutes, "0.0.0.0", port).map(_ => println("Started"))
   }
 
   private def responseToString(): String = {
@@ -48,10 +50,12 @@ class Server(client: Client, basePath: String)(implicit sparkConfiguration: Spar
       dfFileHandler.copyFromS3("mean", basePath)
     }
 
+    val meanPath = if (modelFileHandler.isS3Folder(basePath)) "file:mean" else "./mean"
+
     trainers.foreach(t => t.loadModel())
     val publicDataset = client.getPublicDataset
     val dataFrameToClassify = PublicDatasetPayloadConverter.publicDStoDF(publicDataset.Payload)
-    val normalized = DataPreprocessorFactory().normalizeToClassify(dataFrameToClassify)
+    val normalized = DataPreprocessorFactory().normalizeToClassify(dataFrameToClassify, meanPath)
     val results: Seq[(String, String)] = trainers.flatMap(t => t.classify(normalized))
 
     val response = Response(composeUsers(results),
