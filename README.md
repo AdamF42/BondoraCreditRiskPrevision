@@ -10,7 +10,9 @@ Peer-to-peer (P2P) lending is a form of online micro-financing that has been gro
 
 Credit scoring is defined as a statistical method used to predict the creditworthiness of a customer, i.e. to estimate whether a loan will default or succeed.
 
-The aim of this project is to use neural networks to solve the problem of credit scoring with 
+The aim of this project is to use neural networks to solve the problem of credit scoring.
+In this project are tested performance of Multilayer Perceptron Classifier (MLP) and Random Forest Classifier
+(RF)
 
 The dataset used in the project can be downloaded freely from the Loan dataset of Bondora (https://www.bondora.com/it/public-reports)
 
@@ -21,38 +23,120 @@ You need to install:
 - spark v2.4.4 with hadoop
 - node v13.12.0
 
+## Local execution
+
 ### EMR
+1. First of all, build the project running the command   
+    ```
+    sbt clean assembly
+    ```   
+2. Run the emr-assembly-0.1.jar with the command  
+    ```
+    spark-submit emr/target/scala-2.11/emr-assembly-0.1.jar   
+    ```  
+    This command will train an MLP and an RF model on 60% of Bondora Dataset and will test it on the remaining part of the Dataset. In output it will display the accuracy results of the testing phase of each model.          
 
 ### EC2
+1. First you need to turn on server node with the command
+    ```
+    node ./node/app.js
+    ```  
+    That application is a simulation of what can be received by Bondora API
+2. Run the ec2-assembly-0.1.jar with the command
+    ```
+    spark-submit ec2/target/scala-2.11/ec2-assembly-0.1.jar
+    ```
+    When the server is ready to receive requests, it will display the message “Started”
+3. Then send a request to the server putting on a browser the following path or on ??????   
+   ```
+    localhost:9000/data
+   ```
+    The result of classifying the new Bondora loans would be displayed in JSON format
+
    
 ## Execution on aws services
 
 ### EMR
-   1. Firstly set aws credentials copying and pasting aws_access_key_id and aws_secret_access_key the following into ~/.aws/credentials. For educate accounts it is necessary to copy even aws_session_token.
-   2. Execute the script update_dataset.sh with the command
-      ./update_dataset.sh <buket-name>
-      This command allows you to download latest version of Bondora Loan Dataset. 
-   3. Execute the script build_and_deploy.sh with the command
-      ./build_and_deploy.sh <buket-name> 
-      This executable is used to built the project, run tests, create jar files of the project and deploy them to the bucket passed as parameter. 
-   4. Execute the script start_cluster.sh with the command
-      ./start_cluster.sh<pem-keys> <bucket-name> <subnet>
-      This executable creates an emr cluster with 1 master and 3 slaves of type m5.xlarge
+1. Firstly set aws credentials copying and pasting aws_access_key_id and aws_secret_access_key into ~/.aws/credentials. For educate accounts it is necessary to copy even aws_session_token.
+2. Execute the script update_dataset.sh with the command
+    ```
+    ./update_dataset.sh <buket-name>
+    ```
+    This command allows you to download latest version of Bondora Loan Dataset.
+3. Execute the script build_and_deploy.sh with the command
+    ```
+    ./build_and_deploy.sh <buket-name>
+    ```
+    This executable is used to built the project, run tests, create jar files of the project and deploy them to the bucket passed as parameter.
+4. Execute the script start_cluster.sh with the command
+    ```
+    ./start_cluster.sh<pem-keys> <bucket-name> <subnet>
+    ```
+    This executable creates an emr cluster with 1 master and 3 slaves of type m5.xlarge
 
 ### EC2
+
+1. Create an EC2 Instance (for further information go to "Tips")
+2. Copy set up file for EC2 ec2_setup.sh to your machine
+    ```   
+    scp -i <pem-keys> ./scripts/ec2_setup.sh root@my.ec2.id.amazonaws.com:/<ec2-home>
+    scp -i <pem-keys> ./node/app.js root@my.ec2.id.amazonaws.com:/<ec2-home>
+    ```
+3. Access via ssh to EC2 machine 
+    ```   
+    ssh <pem-keys> root@my.ec2.id.amazonaws.com
+    ```
+4. Execute ec2_setup.sh file
+    ```   
+    sudo ./ec2_setup.sh
+    ```   
+5. Set aws credentials copying and pasting aws_access_key_id and aws_secret_access_key into ~/.aws/credentials. For educate accounts it is necessary to copy even aws_session_token.
+    ```   
+    mkdir .aws
+    nano ~/.aws/credentials 
+    #paste inside file credentials
+    ```   
+6. Copy ec2-assembly-0.1.jar file from s3 to ec2
+    ```   
+    aws s3 cp s3://<bucket-name>/ec2-assembly-0.1.jar .
+    ```  
+6. Turn on server node with the command !!!!!!!
+    ```
+    node ./node/app.js
+    ```  
+    That application is a simulation of what can be received by Bondora API
+7. Run the ec2-assembly-0.1.jar with the command
+    ```
+    sudo /opt/spark-2.4.4-bin-hadoop2.7/bin/spark-submit ec2-assembly-0.1.jar s3://<bucket-name>
+    ```
+    When the server is ready to receive requests, it will display the message “Started”
+8. Then send a request to the server putting on a browser the following path or on ??????   
+   ```
+    <you-machine-ip>:80/data
+   ```
+    The result of classifying the new Bondora loans would be displayed in JSON format   
+
+
 
 
 ### Tips
 
-(1) How to create an s3 bucket
-Go to Amazon S3 console (https://s3.console.aws.amazon.com/s3)
-Click on “Create bucket”
-Choose a name for the bucket and click on the button “Create”
+####How to create an s3 bucket
++ Go to Amazon S3 console (https://s3.console.aws.amazon.com/s3)
++ Click on “Create bucket”
++ Choose a name for the bucket and click on the button “Create”
 
-(2) How to create an EC2 key pair
-Go to AWS Management Console (https://console.aws.amazon.com/ec2/home)
-In the Navigation pane, click Key Pairs
-On the Key Pairs page, click Create Key Pair
-In the Create Key Pair dialog box, enter a name for your key pair, such as, mykeypair
-Click Create
-Save the resulting PEM file in a safe location
+####How to create an EC2 key pair
++ Go to AWS Management Console (https://console.aws.amazon.com/ec2/home)
++ In the Navigation pane, click Key Pairs
++ On the Key Pairs page, click Create Key Pair
++ In the Create Key Pair dialog box, enter a name for your key pair, such as, mykeypair
++ Click Create
++ Save the resulting PEM file in a safe location
+
+####How to create EC2 Instance
+1. From AWS Management Console choose "EC2"
+2. Click on "Running Instances" and then on "Launch Instance"
+3. Select an Amazon Machine Image e.g. Ubuntu Server 18.04 LTS (HVM), SSD Volume Type
+4. Click on "Review and Launch" and then on "Launch"
+5. Select a Key Pair and click on "Launch Instances"
