@@ -122,12 +122,12 @@ You need to install:
 
 ### Tips
 
-####How to create an s3 bucket
+#### How to create an s3 bucket
 + Go to Amazon S3 console (https://s3.console.aws.amazon.com/s3)
 + Click on “Create bucket”
 + Choose a name for the bucket and click on the button “Create”
 
-####How to create an EC2 key pair
+#### How to create an EC2 key pair
 + Go to AWS Management Console (https://console.aws.amazon.com/ec2/home)
 + In the Navigation pane, click Key Pairs
 + On the Key Pairs page, click Create Key Pair
@@ -135,14 +135,14 @@ You need to install:
 + Click Create
 + Save the resulting PEM file in a safe location
 
-####How to create EC2 Instance
+#### How to create EC2 Instance
 + From AWS Management Console choose "EC2"
 + Click on "Running Instances" and then on "Launch Instance"
 + Select an Amazon Machine Image e.g. Ubuntu Server 18.04 LTS (HVM), SSD Volume Type
 + Click on "Review and Launch" and then on "Launch"
 + Select a Key Pair and click on "Launch Instances"
 
-####Change security group for EC2 Instance
+#### Change security group for EC2 Instance
 + Search for the label "Security group" and click on the link with security name (ex. launch-wizard-n)
 + Click on the the security group link
 + Click on "Edit inbound rules" and then on "Add Rule"

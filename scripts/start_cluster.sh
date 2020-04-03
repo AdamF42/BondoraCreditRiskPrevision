@@ -8,7 +8,7 @@ NAME="SCPCluster"
 REGION="us-east-1"
 RELEASE="emr-5.29.0"
 INSTANCE_TYPE="m5.xlarge"
-NODES=4
+NODES=6
 ASSEMBLY="emr-assembly-0.1.jar"
 
 function trap_handler()
