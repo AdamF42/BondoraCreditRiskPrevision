@@ -19,6 +19,9 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 class Server(client: Client, basePath: String)(implicit sparkConfiguration: SparkConfiguration) {
 
   val trainers = Seq(ClassifierFactory(MLP), ClassifierFactory(RF))
+  val localPort = 9000
+  val remotePort = 80
+
 
   implicit val actorSystem: ActorSystem = ActorSystem("sttp-pres")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
@@ -32,8 +35,8 @@ class Server(client: Client, basePath: String)(implicit sparkConfiguration: Spar
     }
 
   def start: Future[Unit] = {
-    val modelFileHandler = FileHandlerFactory(FileHandlerFactory.model)
-    val port = if (modelFileHandler.isS3Folder(basePath)) 80 else 9000
+    val fileHandler = FileHandlerFactory(FileHandlerFactory.model)
+    val port = if (fileHandler.isS3Folder(basePath)) remotePort else localPort
     sparkConfiguration.getOrCreateSession
     Http().bindAndHandle(serverRoutes, "0.0.0.0", port).map(_ => println("Started"))
   }

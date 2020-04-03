@@ -14,8 +14,11 @@ The aim of this project is to use neural networks to solve the problem of credit
 In this project are tested performance of Multilayer Perceptron Classifier (MLP) and Random Forest Classifier
 (RF)
 
-The dataset used in the project can be downloaded freely from the Loan dataset of Bondora (https://www.bondora.com/it/public-reports)
-
+The dataset used in the project can be downloaded freely from the Loan dataset of Bondora (https://www.bondora.com/it/public-reports). To download it from command line, type the following commands in project folder:
+```
+wget https://www.bondora.com/marketing/media/LoanData.zip -O ../Bondora.zip
+unzip ../Bondora.zip -d ../
+```
 ## Development Environment
 
 You need to install:
@@ -30,7 +33,7 @@ You need to install:
     ```
     sbt clean assembly
     ```   
-2. Run the emr-assembly-0.1.jar with the command  
+2. Run the *emr-assembly-0.1.jar* with the command  
     ```
     spark-submit emr/target/scala-2.11/emr-assembly-0.1.jar   
     ```  
@@ -42,12 +45,12 @@ You need to install:
     node ./node/app.js
     ```  
     That application is a simulation of what can be received by Bondora API
-2. Run the ec2-assembly-0.1.jar with the command
+2. Run the *ec2-assembly-0.1.jar* with the command
     ```
     spark-submit ec2/target/scala-2.11/ec2-assembly-0.1.jar
     ```
     When the server is ready to receive requests, it will display the message “Started”
-3. Then send a request to the server putting on a browser the following path or on ??????   
+3. Then send a request to the server putting on a browser the following path  
    ```
     localhost:9000/data
    ```
@@ -57,18 +60,18 @@ You need to install:
 ## Execution on aws services
 
 ### EMR
-1. Firstly set aws credentials copying and pasting aws_access_key_id and aws_secret_access_key into ~/.aws/credentials. For educate accounts it is necessary to copy even aws_session_token.
-2. Execute the script update_dataset.sh with the command
+1. Firstly set aws credentials copying and pasting **aws_access_key_id** and **aws_secret_access_key** into *~/.aws/credentials*. For educate accounts it is necessary to copy even **aws_session_token**.
+2. Execute the script *update_dataset.sh* with the command
     ```
     ./update_dataset.sh <buket-name>
     ```
     This command allows you to download latest version of Bondora Loan Dataset.
-3. Execute the script build_and_deploy.sh with the command
+3. Execute the script *build_and_deploy.sh* with the command
     ```
     ./build_and_deploy.sh <buket-name>
     ```
     This executable is used to built the project, run tests, create jar files of the project and deploy them to the bucket passed as parameter.
-4. Execute the script start_cluster.sh with the command
+4. Execute the script *start_cluster.sh* with the command
     ```
     ./start_cluster.sh<pem-keys> <bucket-name> <subnet>
     ```
@@ -76,8 +79,8 @@ You need to install:
 
 ### EC2
 
-1. Create an EC2 Instance (for further information go to "Tips")
-2. Copy set up file for EC2 ec2_setup.sh to your machine
+1. Create an EC2 Instance and set security group to accept HTTP requests (for further information go to "Tips")
+2. Copy set up file for EC2 *ec2_setup.sh* to your machine
     ```   
     scp -i <pem-keys> ./scripts/ec2_setup.sh root@my.ec2.id.amazonaws.com:/<ec2-home>
     scp -i <pem-keys> ./node/app.js root@my.ec2.id.amazonaws.com:/<ec2-home>
@@ -94,29 +97,27 @@ You need to install:
     ```   
     mkdir .aws
     nano ~/.aws/credentials 
-    #paste inside file credentials
+    #paste credentials inside that file
     ```   
 6. Copy ec2-assembly-0.1.jar file from s3 to ec2
     ```   
     aws s3 cp s3://<bucket-name>/ec2-assembly-0.1.jar .
     ```  
-6. Turn on server node with the command !!!!!!!
+7. Turn on server node with the command
     ```
     node ./node/app.js
     ```  
     That application is a simulation of what can be received by Bondora API
-7. Run the ec2-assembly-0.1.jar with the command
+8. Run the ec2-assembly-0.1.jar with the command
     ```
     sudo /opt/spark-2.4.4-bin-hadoop2.7/bin/spark-submit ec2-assembly-0.1.jar s3://<bucket-name>
     ```
     When the server is ready to receive requests, it will display the message “Started”
-8. Then send a request to the server putting on a browser the following path or on ??????   
+9. Then send a request to the server putting on a browser the following path   
    ```
-    <you-machine-ip>:80/data
+    <your-machine-ip>:80/data
    ```
     The result of classifying the new Bondora loans would be displayed in JSON format   
-
-
 
 
 ### Tips
@@ -135,8 +136,19 @@ You need to install:
 + Save the resulting PEM file in a safe location
 
 ####How to create EC2 Instance
-1. From AWS Management Console choose "EC2"
-2. Click on "Running Instances" and then on "Launch Instance"
-3. Select an Amazon Machine Image e.g. Ubuntu Server 18.04 LTS (HVM), SSD Volume Type
-4. Click on "Review and Launch" and then on "Launch"
-5. Select a Key Pair and click on "Launch Instances"
++ From AWS Management Console choose "EC2"
++ Click on "Running Instances" and then on "Launch Instance"
++ Select an Amazon Machine Image e.g. Ubuntu Server 18.04 LTS (HVM), SSD Volume Type
++ Click on "Review and Launch" and then on "Launch"
++ Select a Key Pair and click on "Launch Instances"
+
+####Change security group for EC2 Instance
++ Search for the label "Security group" and click on the link with security name (ex. launch-wizard-n)
++ Click on the the security group link
++ Click on "Edit inbound rules" and then on "Add Rule"
++ Add the following rule:
+    + Type: Custom TCP
+    + Protocol: TCP
+    + Port range: 9000
+    + Source: Anywhere
+ + Click on "Save" button

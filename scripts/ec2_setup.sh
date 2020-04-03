@@ -34,3 +34,5 @@ sudo apt-get install awscli
 sudo apt-get install nodejs
 
 sudo apt-get install npm
+
+npm install express
