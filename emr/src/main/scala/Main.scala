@@ -7,6 +7,7 @@ import it.unibo.datapreprocessor.DataPreprocessorFactory
 import it.unibo.filesys.FileHandlerFactory
 import it.unibo.normalizer.NormalizerFactory
 import it.unibo.sparksession.{Configuration, SparkConfiguration}
+import it.unibo.utils.Primitives
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 
@@ -22,7 +23,7 @@ object Main {
 
     val basePath: String = args.headOption getOrElse ".."
 
-    val normalized: DataFrame = getNormalizedDataFrame(basePath)
+    val normalized: DataFrame = Primitives.time(getNormalizedDataFrame(basePath))
 
     val splits = normalized.randomSplit(Array(0.6, 0.4), seed = 1234L)
     val train: Dataset[Row] = splits(0)
@@ -51,6 +52,7 @@ object Main {
   }
 
   private def getNormalizedDataFrame(root: String)(implicit sparkConfiguration: Configuration): DataFrame = {
+    println("getNormalizedDataFrame")
     val conf = sparkConfiguration.getOrCreateSession.sparkContext.hadoopConfiguration
     val fs = FileSystem.get(URI.create(root), conf)
     if (fs.exists(new Path(root + normalizedDataSetPath))) retrieveNormalizedDataFrame(root)
@@ -67,8 +69,7 @@ object Main {
 
     val preprocessor = DataPreprocessorFactory()
     val df = preprocessor.readFile(root + originDataSetPath)
-
-    preprocessor.normalizeToTrain(df)
+    Primitives.time(preprocessor.normalizeToTrain(df))
   }
 
 }

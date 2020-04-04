@@ -1,5 +1,6 @@
 package it.unibo.datapreprocessor
 
+import it.unibo.utils.Primitives
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.feature.{StringIndexer, VectorAssembler}
 import org.apache.spark.ml.linalg.Matrix
@@ -18,19 +19,25 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
       .load(filePath)
 
   override def normalizeToTrain(df: DataFrame): DataFrame = {
+    println("################# filterEndedLoans #################")
+    val dfEndedLoans = Primitives.time(filterEndedLoans(df))
 
-    val dfEndedLoans = filterEndedLoans(df)
+    println("################# removeUselessColumns #################")
+    val dfWithoutUselessCols: DataFrame = Primitives.time(removeUselessColumns(dfEndedLoans))
 
-    val dfWithoutUselessCols: DataFrame = removeUselessColumns(dfEndedLoans)
+    println("################# transformValuesToDouble #################")
+    val dfWithDoubleValues: DataFrame = Primitives.time(transformValuesToDouble(dfWithoutUselessCols))
 
-    val dfWithDoubleValues: DataFrame = transformValuesToDouble(dfWithoutUselessCols)
+    println("################# indexColumnsValues #################")
+    val indexedDf: DataFrame = Primitives.time(indexColumnsValues(dfWithDoubleValues))
 
-    val indexedDf: DataFrame = indexColumnsValues(dfWithDoubleValues)
+    println("################# dropColumnsWithHighCorr #################")
+    val dfReduced: DataFrame = Primitives.time(dropColumnsWithHighCorr(indexedDf))
 
-    val dfReduced: DataFrame = dropColumnsWithHighCorr(indexedDf)
+    println("################# getMapColumnsMean #################")
+    val meanMap: Map[String, Any] = Primitives.time(getMapColumnsMean(dfReduced))
 
-    val meanMap: Map[String, Any] = getMapColumnsMean(dfReduced)
-
+    println("################# normalizeToTrain #################")
     dfReduced.na.fill(meanMap)
   }
 
@@ -54,7 +61,7 @@ private class DataPreprocessor(session: SparkSession) extends BaseDataPreprocess
   private def loadDataframe(): DataFrame =
     session.read.format("csv")
       .option("header", value = true)
-      .load("file:mean")
+      .load("./mean")
 
   private def indexColumnsValues(df: DataFrame): DataFrame = {
 
