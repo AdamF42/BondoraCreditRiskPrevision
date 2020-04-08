@@ -43,3 +43,5 @@ sudo apt-get -y install nodejs
 sudo apt-get -y install npm
 
 npm install express
+
+source ~/.bashrc
